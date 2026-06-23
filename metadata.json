@@ -1,0 +1,6 @@
+{
+  "name": "Raikos",
+  "description": "Sistem informasi pemesanan dan manajemen kos modern berbasis web dengan fitur pemesanan online, dashboard penyewa, manajemen admin premium, dan laporan keuangan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
