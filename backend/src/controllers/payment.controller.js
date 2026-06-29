@@ -13,11 +13,15 @@ export class PaymentController {
 
   static async createPayment(req, res) {
     try {
-      const payment = await PaymentService.createPayment(req.body);
+      const paymentData = { ...req.body };
+      if (req.file) {
+        paymentData.proof_image = `/uploads/payment/${req.file.filename}`;
+      }
+      const payment = await PaymentService.createPayment(paymentData);
       return res.status(200).json({ success: true, payment });
     } catch (error) {
       console.error("[PaymentController.createPayment] Error:", error);
-      return res.status(500).json({ success: false, message: "Gagal mengunggah bukti pembayaran." });
+      return res.status(400).json({ success: false, message: error.message || "Gagal mengunggah bukti pembayaran." });
     }
   }
 

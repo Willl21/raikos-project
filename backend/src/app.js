@@ -1,4 +1,4 @@
-﻿import express from "express";
+import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer as createViteServer } from "vite";
@@ -23,6 +23,7 @@ const app = express();
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use("/uploads", express.static(path.join(projectRoot, "uploads")));
 app.use(requestMiddleware);
 
 app.use("/api/auth", authRoutes);
