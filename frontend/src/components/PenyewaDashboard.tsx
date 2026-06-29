@@ -110,8 +110,12 @@ export default function PenyewaDashboard({
     bookingId: "",
     amount: 0,
     paymentMethod: "Transfer Bank BCA",
-    proofImage: "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?auto=format&fit=crop&q=80&w=600"
+    proofImage: ""
   });
+  const [paymentType, setPaymentType] = useState<"transfer" | "cash">("transfer");
+  const [meetupDate, setMeetupDate] = useState("");
+  const [proofImageBase64, setProofImageBase64] = useState<string | null>(null);
+  const [formError, setFormError] = useState("");
 
   const [savingProfile, setSavingProfile] = useState(false);
 
@@ -152,18 +156,56 @@ export default function PenyewaDashboard({
     }, 600);
   };
 
+  const getMaxMeetupDate = (entryDateStr: string) => {
+    if (!entryDateStr) return "";
+    const d = new Date(entryDateStr);
+    if (isNaN(d.getTime())) return "";
+    d.setDate(d.getDate() - 3);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
   const handlePaymentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
     if (!paymentForm.bookingId) return;
 
-    onSubmitPayment({
-      booking_id: paymentForm.bookingId,
-      amount: Number(paymentForm.amount),
-      payment_method: paymentForm.paymentMethod,
-      proof_image: paymentForm.proofImage,
-      billing_month: new Date().toLocaleString("id-ID", { month: "long" }),
-      billing_year: new Date().getFullYear().toString()
-    });
+    const currentBooking = bookings.find(b => b.id === paymentForm.bookingId);
+
+    if (paymentType === "transfer") {
+      if (!proofImageBase64) {
+        setFormError("Silakan upload file bukti pembayaran Anda dari perangkat.");
+        return;
+      }
+      onSubmitPayment({
+        booking_id: paymentForm.bookingId,
+        amount: Number(paymentForm.amount),
+        payment_method: paymentForm.paymentMethod,
+        proof_image: proofImageBase64,
+        billing_month: new Date().toLocaleString("id-ID", { month: "long" }),
+        billing_year: new Date().getFullYear().toString()
+      });
+    } else {
+      if (!meetupDate) {
+        setFormError("Silakan pilih tanggal janji ketemu.");
+        return;
+      }
+      const maxDateStr = getMaxMeetupDate(currentBooking?.entry_date || "");
+      if (maxDateStr && meetupDate > maxDateStr) {
+        setFormError(`Tanggal janji ketemu maksimal H-3 dari tanggal masuk (${currentBooking?.entry_date}). Tanggal maksimal adalah ${maxDateStr}.`);
+        return;
+      }
+      onSubmitPayment({
+        booking_id: paymentForm.bookingId,
+        amount: Number(paymentForm.amount),
+        payment_method: "Cash Langsung",
+        meetup_date: meetupDate,
+        billing_month: new Date().toLocaleString("id-ID", { month: "long" }),
+        billing_year: new Date().getFullYear().toString()
+      });
+    }
 
     setUploadPaymentOpen(false);
   };
@@ -173,8 +215,12 @@ export default function PenyewaDashboard({
       bookingId: b.id,
       amount: b.total_price,
       paymentMethod: "Transfer Bank BCA",
-      proofImage: "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?auto=format&fit=crop&q=80&w=600"
+      proofImage: ""
     });
+    setPaymentType("transfer");
+    setMeetupDate("");
+    setProofImageBase64(null);
+    setFormError("");
     setUploadPaymentOpen(true);
   };
 
@@ -322,6 +368,7 @@ export default function PenyewaDashboard({
                     <div className="space-y-4">
                       {tenantBookings.map((b) => {
                         const targetRoom = roomsLookup[b.room_id];
+                        const alreadyPaid = tenantPayments.find(p => p.booking_id === b.id);
                         return (
                           <div 
                             key={b.id} 
@@ -347,25 +394,35 @@ export default function PenyewaDashboard({
                                     ? "bg-rose-100 text-rose-700"
                                     : "bg-amber-100 text-amber-700"
                                 }`}>
-                                  Status: {b.status}
+                                  Status Booking: {b.status === "confirmed" ? "Disetujui" : b.status === "rejected" ? "Ditolak" : "Menunggu Persetujuan"}
                                 </span>
                               </div>
                             </div>
                             
-                            {/* Action billing if booking is not rejected */}
-                            {b.status === "pending" && (
+                            {/* Action billing based on booking status & payment status */}
+                            {b.status === "pending" ? (
+                              <div className="text-[11px] font-semibold text-amber-600 bg-amber-50 dark:bg-amber-950/20 px-3 py-1.5 rounded-lg">
+                                Menunggu Persetujuan Booking Admin
+                              </div>
+                            ) : b.status === "rejected" ? (
+                              <div className="text-[11px] font-semibold text-rose-500 bg-rose-50 dark:bg-rose-950/20 px-3 py-1.5 rounded-lg">
+                                Booking Ditolak
+                              </div>
+                            ) : !alreadyPaid || alreadyPaid.status === "rejected" ? (
                               <button
                                 onClick={() => selectBookingForPayment(b)}
                                 className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:opacity-90 rounded-xl shadow transition"
                               >
-                                Bayar & Upload Bukti
+                                Lakukan Pembayaran
                               </button>
-                            )}
-
-                            {b.status === "confirmed" && (
-                              <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-950/20 px-3 py-1.5 rounded-lg">
-                                <ShieldCheck className="w-4 h-4" />
-                                Terkonfirmasi Lunas
+                            ) : (
+                              <div className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg ${
+                                alreadyPaid.status === "approved"
+                                  ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20"
+                                  : "text-amber-500 bg-amber-50 dark:bg-amber-950/20"
+                              }`}>
+                                {alreadyPaid.status === "approved" ? <ShieldCheck className="w-4 h-4" /> : null}
+                                {alreadyPaid.status === "approved" ? "Terkonfirmasi Lunas" : "Verifikasi Pembayaran"}
                               </div>
                             )}
                           </div>
@@ -612,22 +669,26 @@ export default function PenyewaDashboard({
                               <p className="font-semibold text-xs text-slate-800 dark:text-slate-200">Jumlah tagihan: Rp {b.total_price.toLocaleString()}</p>
                             </div>
 
-                            {alreadyPaid ? (
-                              <span className={`text-[11px] font-bold px-2 py-12 rounded capitalize ${
+                            {b.status === "pending" ? (
+                              <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 dark:bg-amber-950/20 px-2.5 py-1 rounded-lg">
+                                Menunggu Persetujuan Booking Admin
+                              </span>
+                            ) : alreadyPaid ? (
+                              <span className={`text-[11px] font-bold px-2.5 py-1.5 rounded-lg border capitalize ${
                                 alreadyPaid.status === "approved" 
-                                  ? "bg-emerald-50 text-emerald-600 border border-emerald-100" 
+                                  ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/30" 
                                   : alreadyPaid.status === "rejected"
-                                  ? "bg-rose-50 text-rose-500 border border-rose-100"
-                                  : "bg-amber-50 text-amber-500 border border-amber-100"
+                                  ? "bg-rose-50 text-rose-500 border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/30"
+                                  : "bg-amber-50 text-amber-500 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/30"
                               }`}>
-                                Pembayaran {alreadyPaid.status}
+                                Pembayaran {alreadyPaid.status === "approved" ? "Disetujui (Lunas)" : alreadyPaid.status === "rejected" ? "Ditolak" : "Verifikasi Admin"}
                               </span>
                             ) : (
                               <button
                                 onClick={() => selectBookingForPayment(b)}
                                 className="px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:opacity-90 rounded-lg shadow-sm"
                               >
-                                Upload Bukti Transfer
+                                Lakukan Pembayaran
                               </button>
                             )}
                           </div>
@@ -771,18 +832,46 @@ export default function PenyewaDashboard({
               </div>
 
               <form onSubmit={handlePaymentSubmit} className="space-y-4 text-xs sm:text-sm">
+                {formError && (
+                  <div className="p-3 bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400 rounded-xl font-medium text-xs border border-rose-100 dark:border-rose-900/30">
+                    {formError}
+                  </div>
+                )}
+
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Metode Pembayaran</label>
-                  <select
-                    className="w-full px-3 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 focus:outline-none focus:border-indigo-500 text-slate-800 dark:text-slate-150"
-                    value={paymentForm.paymentMethod}
-                    onChange={(e) => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value })}
-                  >
-                    <option value="Transfer Bank BCA">Transfer Bank BCA (884-293-192-1 a/n PT Raikos)</option>
-                    <option value="Transfer Bank Mandiri">Transfer Bank Mandiri (133-00-192-38 a/n PT Raikos)</option>
-                    <option value="Dana / Gopay">Transfer E-Wallet Dana / Gopay (081234567890)</option>
-                    <option value="Cash Langsung">Sewa Cash Langsung Toko / Kasir Admin</option>
-                  </select>
+                  <label className="block text-xs font-semibold text-slate-500 mb-2">Tipe Pembayaran</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaymentType("transfer");
+                        setPaymentForm({ ...paymentForm, paymentMethod: "Transfer Bank BCA" });
+                        setFormError("");
+                      }}
+                      className={`py-2 px-3 text-xs font-semibold rounded-xl border transition ${
+                        paymentType === "transfer"
+                          ? "bg-indigo-50 border-indigo-200 text-indigo-600 dark:bg-indigo-950/20 dark:border-indigo-900/40"
+                          : "bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-950 dark:border-slate-850"
+                      }`}
+                    >
+                      Transfer Bank / E-Wallet
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaymentType("cash");
+                        setPaymentForm({ ...paymentForm, paymentMethod: "Cash Langsung" });
+                        setFormError("");
+                      }}
+                      className={`py-2 px-3 text-xs font-semibold rounded-xl border transition ${
+                        paymentType === "cash"
+                          ? "bg-indigo-50 border-indigo-200 text-indigo-600 dark:bg-indigo-950/20 dark:border-indigo-900/40"
+                          : "bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-950 dark:border-slate-850"
+                      }`}
+                    >
+                      Cash (Tunai Langsung)
+                    </button>
+                  </div>
                 </div>
 
                 <div>
@@ -792,29 +881,77 @@ export default function PenyewaDashboard({
                     className="w-full px-3 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 focus:outline-none text-slate-800 dark:text-slate-150"
                     value={paymentForm.amount}
                     onChange={(e) => setPaymentForm({ ...paymentForm, amount: Number(e.target.value) })}
+                    disabled
                     required
                   />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Dummy URL Bukti Transfer Image</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 focus:outline-none text-slate-850 dark:text-slate-150"
-                    value={paymentForm.proofImage}
-                    onChange={(e) => setPaymentForm({ ...paymentForm, proofImage: e.target.value })}
-                    required
-                  />
-                  <p className="text-[10px] text-slate-450 mt-1 leading-normal">
-                    * Gunakan link gambar Unsplash bawaan atau ganti link gambar transfer bank Anda sendiri.
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    * Jumlah disesuaikan otomatis dengan harga sewa kamar Anda.
                   </p>
                 </div>
+
+                {paymentType === "transfer" ? (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">Pilih Bank / E-Wallet Tujuan</label>
+                      <select
+                        className="w-full px-3 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 focus:outline-none focus:border-indigo-500 text-slate-800 dark:text-slate-150"
+                        value={paymentForm.paymentMethod}
+                        onChange={(e) => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value })}
+                      >
+                        <option value="Transfer Bank BCA">Transfer Bank BCA (884-293-192-1 a/n PT Raikos)</option>
+                        <option value="Transfer Bank Mandiri">Transfer Bank Mandiri (133-00-192-38 a/n PT Raikos)</option>
+                        <option value="Dana / Gopay">Transfer E-Wallet Dana / Gopay (081234567890)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">Upload File Bukti Transfer (dari Device)</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="w-full px-3 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 focus:outline-none text-slate-800 dark:text-slate-150"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setProofImageBase64(reader.result as string);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        required
+                      />
+                      {proofImageBase64 && (
+                        <div className="mt-2 p-1 border rounded-lg bg-slate-50 dark:bg-slate-950 flex flex-col items-center">
+                          <p className="text-[10px] text-slate-400 mb-1">Pratinjau File:</p>
+                          <img src={proofImageBase64} alt="Pratinjau" className="max-h-32 object-contain rounded" />
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Tanggal Janji Ketemu (Maksimal H-3)</label>
+                    <input
+                      type="date"
+                      className="w-full px-3 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 text-slate-800 dark:text-slate-150 focus:outline-none focus:border-indigo-500"
+                      value={meetupDate}
+                      onChange={(e) => setMeetupDate(e.target.value)}
+                      max={getMaxMeetupDate(bookings.find(b => b.id === paymentForm.bookingId)?.entry_date || "")}
+                      required
+                    />
+                    <p className="text-[10px] text-indigo-500 dark:text-indigo-400 mt-1 leading-normal">
+                      * Sesuai tanggal masuk kamar Anda ({bookings.find(b => b.id === paymentForm.bookingId)?.entry_date || "belum diatur"}), janji temu pembayaran cash wajib dilakukan maksimal 3 hari sebelumnya (H-3). Tanggal maksimal: {getMaxMeetupDate(bookings.find(b => b.id === paymentForm.bookingId)?.entry_date || "") || "-"}
+                    </p>
+                  </div>
+                )}
 
                 <div className="pt-4 border-t border-slate-100 dark:border-slate-850 flex justify-end gap-3">
                   <button
                     type="button"
                     onClick={() => setUploadPaymentOpen(false)}
-                    className="px-4 py-2 border rounded-xl text-xs font-semibold hover:bg-slate-50"
+                    className="px-4 py-2 border rounded-xl text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-350"
                   >
                     Batal
                   </button>
@@ -822,7 +959,7 @@ export default function PenyewaDashboard({
                     type="submit"
                     className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:opacity-90 shadow"
                   >
-                    Unggah Sekarang
+                    {paymentType === "transfer" ? "Unggah Sekarang" : "Ajukan Janji Temu"}
                   </button>
                 </div>
               </form>

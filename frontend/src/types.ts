@@ -1,4 +1,4 @@
-export type RoomStatus = "tersedia" | "dipesan" | "terisi";
+export type RoomStatus = "tersedia" | "dipesan" | "terisi" | "BOOKED";
 export type BookingStatus = "pending" | "confirmed" | "rejected";
 export type PaymentStatus = "pending" | "approved" | "rejected";
 
@@ -62,6 +62,7 @@ export interface Payment {
   amount: number;
   payment_method: string;
   proof_image?: string;
+  meetup_date?: string;
   status: PaymentStatus;
   billing_month: string;
   billing_year: string;

@@ -22,13 +22,33 @@ export default function App() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab ] = useState<string>("landing"); // landing, room-detail, tenant-dashboard, admin-dashboard
-  const [tenantSubTab, setTenantSubTab] = useState<"overview" | "profile" | "bookings" | "payments" | "notifications">("overview");
+  const [activeTab, setActiveTab ] = useState<string>(() => {
+    const savedTab = localStorage.getItem("raikos-active-tab");
+    if (savedTab) return savedTab;
+    const savedRole = localStorage.getItem("raikos-role");
+    if (savedRole === "admin") return "admin-dashboard";
+    if (savedRole === "tenant") return "tenant-dashboard";
+    return "landing";
+  }); // landing, room-detail, tenant-dashboard, admin-dashboard
+  const [tenantSubTab, setTenantSubTab] = useState<"overview" | "profile" | "bookings" | "payments" | "notifications">(() => {
+    const savedSubTab = localStorage.getItem("raikos-tenant-sub-tab");
+    return (savedSubTab as any) || "overview";
+  });
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
 
   // Authentication states
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [currentRole, setCurrentRole] = useState<"tenant" | "admin" | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    const savedUser = localStorage.getItem("raikos-user");
+    try {
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+  const [currentRole, setCurrentRole] = useState<"tenant" | "admin" | null>(() => {
+    const savedRole = localStorage.getItem("raikos-role");
+    return (savedRole === "tenant" || savedRole === "admin") ? savedRole : null;
+  });
 
   // Modal dialog triggers
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -71,6 +91,39 @@ export default function App() {
     document.documentElement.classList.remove("dark");
     localStorage.removeItem("raikos-dark");
   }, []);
+
+  // Synchronize state with localStorage
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem("raikos-user", JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem("raikos-user");
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (currentRole) {
+      localStorage.setItem("raikos-role", currentRole);
+    } else {
+      localStorage.removeItem("raikos-role");
+    }
+  }, [currentRole]);
+
+  useEffect(() => {
+    if (activeTab) {
+      localStorage.setItem("raikos-active-tab", activeTab);
+    } else {
+      localStorage.removeItem("raikos-active-tab");
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (tenantSubTab) {
+      localStorage.setItem("raikos-tenant-sub-tab", tenantSubTab);
+    } else {
+      localStorage.removeItem("raikos-tenant-sub-tab");
+    }
+  }, [tenantSubTab]);
 
   // Display toast feedback helper
   const showToast = (message: string, type: ToastType = "success") => {

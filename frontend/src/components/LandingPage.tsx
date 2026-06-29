@@ -219,11 +219,11 @@ export default function LandingPage({ rooms, onSelectRoom, isLoading }: LandingP
                         <span className={`px-2.5 py-1 text-[11px] font-bold rounded-lg text-white uppercase tracking-wider shadow ${
                           room.status === "tersedia" 
                             ? "bg-gradient-to-r from-emerald-500 to-green-600 shadow-emerald-500/10" 
-                            : room.status === "dipesan"
+                            : (room.status === "dipesan" || room.status === "BOOKED")
                             ? "bg-gradient-to-r from-amber-500 to-orange-600 shadow-amber-500/10"
                             : "bg-gradient-to-r from-slate-500 to-slate-700 shadow-slate-500/10"
                         }`}>
-                          {room.status === "tersedia" ? "Tersedia" : room.status === "dipesan" ? "Dipesan" : "Terisi"}
+                          {room.status === "tersedia" ? "Tersedia" : (room.status === "dipesan" || room.status === "BOOKED") ? "Dipesan" : "Terisi"}
                         </span>
                         
                         <span className="px-2 py-0.5 text-[10px] font-semibold rounded-md bg-white/90 text-slate-800 w-fit backdrop-blur">

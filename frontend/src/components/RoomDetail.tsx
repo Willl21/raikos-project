@@ -180,11 +180,11 @@ export default function RoomDetail({
               <span className={`px-3 py-1 text-xs font-bold rounded-lg text-white uppercase tracking-wider ${
                 room.status === "tersedia" 
                   ? "bg-emerald-500 shadow-md shadow-emerald-500/10" 
-                  : room.status === "dipesan"
+                  : (room.status === "dipesan" || room.status === "BOOKED")
                   ? "bg-amber-500 shadow-md shadow-amber-500/10"
                   : "bg-slate-500 shadow-md shadow-slate-500/10"
               }`}>
-                Kamar {room.status === "tersedia" ? "Tersedia" : room.status === "dipesan" ? "Dipesan" : "Terisi"}
+                Kamar {room.status === "tersedia" ? "Tersedia" : (room.status === "dipesan" || room.status === "BOOKED") ? "Dipesan" : "Terisi"}
               </span>
               <span className="px-3 py-1 text-xs font-semibold rounded-lg bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-sky-400">
                 {room.type}
@@ -365,7 +365,13 @@ export default function RoomDetail({
                         : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed shadow-none"
                     }`}
                   >
-                    <span>{room.status === "tersedia" ? "Booking Kamar Sekarang" : "Kamar Saat Ini Terisi"}</span>
+                    <span>
+                      {room.status === "tersedia" 
+                        ? "Booking Kamar Sekarang" 
+                        : (room.status === "dipesan" || room.status === "BOOKED")
+                        ? "Kamar Sudah Dipesan" 
+                        : "Kamar Saat Ini Terisi"}
+                    </span>
                   </motion.button>
                   <p className="text-[10px] text-center text-slate-400 leading-normal">
                     * Booking melalui sistem Raikos dijamin aman dengan monitoring tagihan transparan & respon pengelola cepat kurang dari 24 jam.
