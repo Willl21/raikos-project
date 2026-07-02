@@ -79,7 +79,7 @@ export class PaymentService {
       const message = isCash
         ? `Janji temu pembayaran Cash sebesar Rp ${amount.toLocaleString("id-ID")} pada tanggal ${pData.meeting_date} berhasil diajukan dan sedang menunggu verifikasi.`
         : `Bukti pembayaran Transfer sebesar Rp ${amount.toLocaleString("id-ID")} telah kami terima dan sedang diproses verifikasi.`;
-      
+
       await conn.query(
         `INSERT INTO notifications (id, user_id, title, message, is_read, created_at)
          VALUES (?, ?, 'Verifikasi Pembayaran Diajukan ⏳', ?, 0, ?)`,
@@ -137,7 +137,7 @@ export class PaymentService {
       let roomName = "#";
       if (bookings.length > 0) {
         const booking = bookings[0];
-        
+
         // Fetch room name
         const [rooms] = await conn.query("SELECT name FROM rooms WHERE id = ?", [booking.room_id]);
         if (rooms.length > 0) {

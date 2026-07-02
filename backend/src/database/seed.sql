@@ -46,12 +46,12 @@ INSERT INTO room_images (room_id, image_url) VALUES
 
 -- 5. Seed Bookings
 INSERT INTO bookings (id, user_id, room_id, name, email, phone, nik, entry_date, duration_months, total_price, status, created_at) VALUES
-('bkg-1', 'usr-1', 'rm-1', 'Budi Santoso', 'penyewa@raikos.com', '08123456789', '3275010203040005', '2026-06-15', 6, 13200000.00, 'confirmed', '2026-06-01 10:15:30'),
+('bkg-1', 'usr-1', 'rm-1', 'Budi Santoso', 'penyewa@raikos.com', '08123456789', '3275010203040005', '2026-06-15', 6, 13200000.00, 'Completed', '2026-06-01 10:15:30'),
 ('bkg-2', 'usr-2', 'rm-3', 'Siti Rahma', 'siti@raikos.com', '08234567890', '3275010203040006', '2026-07-01', 3, 8400000.00, 'pending', '2026-06-05 14:22:15');
 
 -- 6. Seed Payments
 INSERT INTO payments (id, booking_id, user_id, amount, payment_method, proof_image, meeting_date, status, billing_month, billing_year, created_at) VALUES
-('pmt-1', 'bkg-1', 'usr-1', 13200000.00, 'Transfer Bank BCA', 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?auto=format&fit=crop&q=80&w=600', NULL, 'approved', 'Juni', '2026', '2026-06-01 11:00:00');
+('pmt-1', 'bkg-1', 'usr-1', 13200000.00, 'Transfer Bank BCA', 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?auto=format&fit=crop&q=80&w=600', NULL, 'Paid', 'Juni', '2026', '2026-06-01 11:00:00');
 
 -- 7. Seed Notifications
 INSERT INTO notifications (id, user_id, title, message, is_read, created_at) VALUES

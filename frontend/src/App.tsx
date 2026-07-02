@@ -156,6 +156,7 @@ export default function App() {
     setIsLoading(true);
     try {
       // Fetch rooms
+      
       const roomsRes = await fetch("/api/rooms");
       if (roomsRes.ok) {
         const roomsData = await roomsRes.json();
@@ -629,6 +630,7 @@ export default function App() {
                 roomsLookup={roomsLookup}
                 activeSubTab={tenantSubTab}
                 setActiveSubTab={setTenantSubTab}
+                onRefreshData={fetchAllData}
               />
             </motion.div>
           )}

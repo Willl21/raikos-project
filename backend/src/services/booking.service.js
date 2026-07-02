@@ -110,7 +110,7 @@ export class BookingService {
 
       // Normalize status casing and map
       let dbStatus = status;
-      if (status === "confirmed" || status === "Approved") {
+      if (status === "Approved") {
         dbStatus = "Approved";
       } else if (status === "rejected" || status === "Rejected") {
         dbStatus = "Rejected";

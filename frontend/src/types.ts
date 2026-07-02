@@ -1,6 +1,6 @@
 export type RoomStatus = "Tersedia" | "BOOKED" | "Terisi" | "tersedia" | "dipesan" | "terisi";
-export type BookingStatus = "Pending Approval" | "Approved" | "Rejected" | "Completed" | "pending" | "confirmed" | "rejected";
-export type PaymentStatus = "Waiting Verification" | "Paid" | "Rejected" | "pending" | "approved" | "rejected";
+export type BookingStatus = "Pending Approval" | "Approved" | "Rejected" | "Completed" | "pending" | "rejected";
+export type PaymentStatus = "Waiting Verification" | "Paid" | "Rejected" | "pending" | "rejected";
 
 export interface User {
   id: string;

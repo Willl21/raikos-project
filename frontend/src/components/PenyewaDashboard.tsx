@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { 
-  User, CreditCard, Clock, Bell, Settings, LogOut, CheckCircle, Upload, 
+import {
+  User, CreditCard, Clock, Bell, Settings, LogOut, CheckCircle, Upload,
   FileText, ShieldCheck, DollarSign, Compass, MessageSquare, AlertCircle, RefreshCw, X,
   Camera, RotateCcw, Trash2
 } from "lucide-react";
@@ -19,6 +19,7 @@ interface PenyewaDashboardProps {
   roomsLookup: any; // ID to Room mapping
   activeSubTab?: "overview" | "profile" | "bookings" | "payments" | "notifications";
   setActiveSubTab?: (tab: "overview" | "profile" | "bookings" | "payments" | "notifications") => void;
+  onRefreshData?: () => void;
 }
 
 export default function PenyewaDashboard({
@@ -30,6 +31,7 @@ export default function PenyewaDashboard({
   onSubmitPayment,
   onMarkNotificationRead,
   onMarkAllNotificationsRead,
+  onRefreshData,
   roomsLookup,
   activeSubTab: propActiveSubTab,
   setActiveSubTab: propSetActiveSubTab
@@ -86,13 +88,20 @@ export default function PenyewaDashboard({
     reader.readAsDataURL(file);
   };
 
+  useEffect(() => {
+    if (!onRefreshData) return;
+    const interval = setInterval(() => {
+      onRefreshData();
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [onRefreshData]);
   const handleResetToGoogle = () => {
     setImageError("");
     setFilePreview(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-    
+
     // Fall back to google avatar, then to system default
     const googleAv = currentUser?.googleAvatar || null;
     const defaultAv = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150";
@@ -145,8 +154,8 @@ export default function PenyewaDashboard({
   const tenantPayments = payments.filter(p => p.user_id === currentUser?.id);
   const tenantNotifs = notifications.filter(n => n.user_id === currentUser?.id);
 
-  // Calculate unpaid/pending billings
-  const activeUnpaidBookings = tenantBookings.filter(b => b.status !== "rejected" && b.status !== "Rejected");
+  // Calculate unPaid/pending billings
+  const activeUnPaidBookings = tenantBookings.filter(b => b.status !== "rejected" && b.status !== "Rejected");
 
   const handleProfileSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,6 +235,8 @@ export default function PenyewaDashboard({
     setUploadPaymentOpen(true);
   };
 
+
+
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       {/* Overview Head line */}
@@ -247,7 +258,7 @@ export default function PenyewaDashboard({
               <span className="relative inline-flex rounded-full h-3 w-3 bg-indigo-600"></span>
             </span>
           )}
-          <button 
+          <button
             onClick={() => setActiveSubTab("notifications")}
             className="flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-sky-450"
           >
@@ -286,11 +297,10 @@ export default function PenyewaDashboard({
                 <button
                   key={sub.id}
                   onClick={() => setActiveSubTab(sub.id as any)}
-                  className={`w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-sm font-semibold transition-all ${
-                    activeSubTab === sub.id
-                      ? "bg-gradient-to-r from-blue-500/10 to-indigo-500/10 text-indigo-600 dark:text-sky-400 border border-indigo-500/10"
-                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-slate-200 border border-transparent"
-                  }`}
+                  className={`w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-sm font-semibold transition-all ${activeSubTab === sub.id
+                    ? "bg-gradient-to-r from-blue-500/10 to-indigo-500/10 text-indigo-600 dark:text-sky-400 border border-indigo-500/10"
+                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-slate-200 border border-transparent"
+                    }`}
                 >
                   {sub.icon}
                   {sub.label}
@@ -343,7 +353,7 @@ export default function PenyewaDashboard({
                     <div>
                       <span className="text-[10px] text-slate-400 uppercase tracking-widest font-mono font-bold">Total Disetor</span>
                       <p className="text-lg font-bold text-emerald-500">
-                        Rp {tenantPayments.reduce((acc, p) => p.status === "approved" ? acc + p.amount : acc, 0).toLocaleString()}
+                        Rp {tenantPayments.reduce((acc, p) => p.status === "Paid" ? acc + p.amount : acc, 0).toLocaleString()}
                       </p>
                     </div>
                     <div className="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/10 text-emerald-500 flex items-center justify-center">
@@ -371,9 +381,10 @@ export default function PenyewaDashboard({
                       {tenantBookings.map((b) => {
                         const targetRoom = roomsLookup[b.room_id];
                         const alreadyPaid = tenantPayments.find(p => p.booking_id === b.id);
+                        const paidStatus = alreadyPaid?.status; // selalu aman, undefined kalau belum bayar
                         return (
-                          <div 
-                            key={b.id} 
+                          <div
+                            key={b.id}
                             className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-850 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
                           >
                             <div className="flex gap-3">
@@ -389,18 +400,18 @@ export default function PenyewaDashboard({
                                   {targetRoom ? targetRoom.name : "Kamar No. " + b.room_id}
                                 </h4>
                                 <p className="text-xs text-slate-400 mt-0.5">Tgl Masuk: {b.entry_date} ({b.duration_months} bln)</p>
-                                <span className={`inline-block mt-2 px-2 py-0.5 text-[10px] font-bold rounded capitalize ${
-                                  b.status === "confirmed" 
-                                    ? "bg-emerald-100 text-emerald-700" 
+                                <span className={`inline-block mt-2 px-2 py-0.5 text-[10px] font-bold rounded capitalize ${b.status === "Approved"
+                                  ? "bg-emerald-100 text-emerald-700" :
+                                  b.status === "Completed" ? "bg-emerald-100 text-emerald-700"
                                     : b.status === "rejected"
-                                    ? "bg-rose-100 text-rose-700"
-                                    : "bg-amber-100 text-amber-700"
-                                }`}>
-                                  Status Booking: {b.status === "confirmed" ? "Disetujui" : b.status === "rejected" ? "Ditolak" : "Menunggu Persetujuan"}
+                                      ? "bg-rose-100 text-rose-700"
+                                      : "bg-amber-100 text-amber-700"
+                                  }`}>
+                                  Status Booking: {b.status === "Approved" ? "Disetujui" : b.status === "Completed" ? "Selesai" : b.status === "rejected" ? "Ditolak" : "Menunggu Persetujuan"}
                                 </span>
                               </div>
                             </div>
-                            
+
                             {/* Action billing based on booking status & payment status */}
                             {b.status === "pending" ? (
                               <div className="text-[11px] font-semibold text-amber-600 bg-amber-50 dark:bg-amber-950/20 px-3 py-1.5 rounded-lg">
@@ -410,7 +421,7 @@ export default function PenyewaDashboard({
                               <div className="text-[11px] font-semibold text-rose-500 bg-rose-50 dark:bg-rose-950/20 px-3 py-1.5 rounded-lg">
                                 Booking Ditolak
                               </div>
-                            ) : !alreadyPaid || alreadyPaid.status === "rejected" ? (
+                            ) : b.status === "Approved" && (!alreadyPaid || paidStatus === "rejected") ? (
                               <button
                                 onClick={() => selectBookingForPayment(b)}
                                 className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:opacity-90 rounded-xl shadow transition"
@@ -418,13 +429,12 @@ export default function PenyewaDashboard({
                                 Lakukan Pembayaran
                               </button>
                             ) : (
-                              <div className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg ${
-                                alreadyPaid.status === "approved"
-                                  ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20"
-                                  : "text-amber-500 bg-amber-50 dark:bg-amber-950/20"
-                              }`}>
-                                {alreadyPaid.status === "approved" ? <ShieldCheck className="w-4 h-4" /> : null}
-                                {alreadyPaid.status === "approved" ? "Terkonfirmasi Lunas" : "Verifikasi Pembayaran"}
+                              <div className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg ${paidStatus === "Paid"
+                                ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20"
+                                : "text-amber-500 bg-amber-50 dark:bg-amber-950/20"
+                                }`}>
+                                {paidStatus === "Paid" ? <ShieldCheck className="w-4 h-4" /> : null}
+                                {paidStatus === "Paid" ? "Terkonfirmasi Lunas" : "Verifikasi Pembayaran"}
                               </div>
                             )}
                           </div>
@@ -623,14 +633,13 @@ export default function PenyewaDashboard({
                         </div>
 
                         <div className="flex flex-col sm:items-end justify-between">
-                          <span className={`px-3 py-1 text-xs font-semibold rounded-lg ${
-                            (b.status === "confirmed" || b.status === "Approved" || b.status === "Completed")
-                              ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20" 
-                              : (b.status === "rejected" || b.status === "Rejected")
+                          <span className={`px-3 py-1 text-xs font-semibold rounded-lg ${(b.status === "Approved" || b.status === "Completed")
+                            ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20"
+                            : (b.status === "rejected" || b.status === "Rejected")
                               ? "bg-rose-50 text-rose-500 dark:bg-rose-950/20"
                               : "bg-amber-50 text-amber-500 dark:bg-amber-950/20"
-                          }`}>
-                            {(b.status === "confirmed" || b.status === "Approved") ? "Disetujui" : b.status === "Completed" ? "Selesai" : (b.status === "rejected" || b.status === "Rejected") ? "Ditolak" : "Menunggu Persetujuan"}
+                            }`}>
+                            {(b.status === "Approved") ? "Disetujui" : b.status === "Completed" ? "Selesai" : (b.status === "rejected" || b.status === "Rejected") ? "Ditolak" : "Menunggu Persetujuan"}
                           </span>
                           <span className="text-[10px] text-slate-400 font-mono mt-1">
                             Diajukan: {new Date(b.created_at).toLocaleDateString()}
@@ -656,12 +665,12 @@ export default function PenyewaDashboard({
                   <h3 className="font-display font-semibold text-base text-slate-900 dark:text-slate-100">
                     Sewa & Pembayaran Aktif
                   </h3>
-                  
-                  {activeUnpaidBookings.length === 0 ? (
+
+                  {activeUnPaidBookings.length === 0 ? (
                     <p className="text-xs text-slate-450 text-left">Tidak ada tagihan atau booking aktif.</p>
                   ) : (
                     <div className="space-y-3">
-                      {activeUnpaidBookings.map(b => {
+                      {activeUnPaidBookings.map(b => {
                         const alreadyPaid = tenantPayments.find(p => p.booking_id === b.id);
                         return (
                           <div key={b.id} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-850 flex items-center justify-between">
@@ -676,14 +685,13 @@ export default function PenyewaDashboard({
                                 Menunggu Persetujuan Booking Admin
                               </span>
                             ) : alreadyPaid ? (
-                              <span className={`text-[11px] font-bold px-2.5 py-1.5 rounded-lg border capitalize ${
-                                (alreadyPaid.status === "approved" || alreadyPaid.status === "Paid")
-                                  ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/30" 
-                                  : (alreadyPaid.status === "rejected" || alreadyPaid.status === "Rejected")
+                              <span className={`text-[11px] font-bold px-2.5 py-1.5 rounded-lg border capitalize ${(alreadyPaid.status === "Paid")
+                                ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/30"
+                                : (alreadyPaid.status === "rejected" || alreadyPaid.status === "Rejected")
                                   ? "bg-rose-50 text-rose-500 border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/30"
                                   : "bg-amber-50 text-amber-500 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/30"
-                              }`}>
-                                Pembayaran {(alreadyPaid.status === "approved" || alreadyPaid.status === "Paid") ? "Lunas" : (alreadyPaid.status === "rejected" || alreadyPaid.status === "Rejected") ? "Ditolak" : "Verifikasi Admin"}
+                                }`}>
+                                Pembayaran {(alreadyPaid.status === "Paid") ? "Lunas" : (alreadyPaid.status === "rejected" || alreadyPaid.status === "Rejected") ? "Ditolak" : "Verifikasi Admin"}
                               </span>
                             ) : (
                               <button
@@ -720,13 +728,12 @@ export default function PenyewaDashboard({
 
                           <div className="text-right space-y-1">
                             <p className="font-bold text-slate-900 dark:text-slate-50">Rp {p.amount.toLocaleString()}</p>
-                            <span className={`inline-block px-1.5 py-0.5 rounded-[4px] text-[9px] font-bold ${
-                              (p.status === "approved" || p.status === "Paid")
-                                ? "bg-emerald-100 text-emerald-800" 
-                                : (p.status === "rejected" || p.status === "Rejected")
-                                ? "bg-rose-100 text-rose-800" 
+                            <span className={`inline-block px-1.5 py-0.5 rounded-[4px] text-[9px] font-bold ${(p.status === "Paid")
+                              ? "bg-emerald-100 text-emerald-800"
+                              : (p.status === "rejected" || p.status === "Rejected")
+                                ? "bg-rose-100 text-rose-800"
                                 : "bg-amber-100 text-amber-850"
-                            }`}>
+                              }`}>
                               {p.status === "Paid" ? "Lunas" : p.status === "Waiting Verification" ? "Menunggu Verifikasi" : p.status === "Rejected" ? "Ditolak" : p.status}
                             </span>
                           </div>
@@ -772,14 +779,13 @@ export default function PenyewaDashboard({
                 ) : (
                   <div className="space-y-4">
                     {tenantNotifs.map((n) => (
-                      <div 
-                        key={n.id} 
+                      <div
+                        key={n.id}
                         onClick={() => !n.is_read && onMarkNotificationRead(n.id)}
-                        className={`p-4 rounded-2xl border transition-all text-left relative ${
-                          n.is_read 
-                            ? "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 opacity-60" 
-                            : "bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-100 dark:border-indigo-900/30 cursor-pointer hover:bg-indigo-50"
-                        }`}
+                        className={`p-4 rounded-2xl border transition-all text-left relative ${n.is_read
+                          ? "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 opacity-60"
+                          : "bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-100 dark:border-indigo-900/30 cursor-pointer hover:bg-indigo-50"
+                          }`}
                       >
                         {!n.is_read && (
                           <span className="absolute top-4 right-4 h-2 w-2 bg-indigo-600 rounded-full" />
@@ -850,11 +856,10 @@ export default function PenyewaDashboard({
                         setPaymentForm({ ...paymentForm, paymentMethod: "Transfer Bank BCA" });
                         setFormError("");
                       }}
-                      className={`py-2 px-3 text-xs font-semibold rounded-xl border transition ${
-                        paymentType === "transfer"
-                          ? "bg-indigo-50 border-indigo-200 text-indigo-600 dark:bg-indigo-950/20 dark:border-indigo-900/40"
-                          : "bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-950 dark:border-slate-850"
-                      }`}
+                      className={`py-2 px-3 text-xs font-semibold rounded-xl border transition ${paymentType === "transfer"
+                        ? "bg-indigo-50 border-indigo-200 text-indigo-600 dark:bg-indigo-950/20 dark:border-indigo-900/40"
+                        : "bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-950 dark:border-slate-850"
+                        }`}
                     >
                       Transfer Bank / E-Wallet
                     </button>
@@ -865,11 +870,10 @@ export default function PenyewaDashboard({
                         setPaymentForm({ ...paymentForm, paymentMethod: "Cash Langsung" });
                         setFormError("");
                       }}
-                      className={`py-2 px-3 text-xs font-semibold rounded-xl border transition ${
-                        paymentType === "cash"
-                          ? "bg-indigo-50 border-indigo-200 text-indigo-600 dark:bg-indigo-950/20 dark:border-indigo-900/40"
-                          : "bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-950 dark:border-slate-850"
-                      }`}
+                      className={`py-2 px-3 text-xs font-semibold rounded-xl border transition ${paymentType === "cash"
+                        ? "bg-indigo-50 border-indigo-200 text-indigo-600 dark:bg-indigo-950/20 dark:border-indigo-900/40"
+                        : "bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-950 dark:border-slate-850"
+                        }`}
                     >
                       Cash (Tunai Langsung)
                     </button>
