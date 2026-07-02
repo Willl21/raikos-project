@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   Building as BuildingIcon, Users as UsersIcon, FileText as FileTextIcon, 
@@ -30,6 +30,7 @@ interface AdminDashboardProps {
   onUpdateBookingStatus: (id: string, status: string) => void;
   onUpdatePaymentStatus: (id: string, status: string) => void;
   onResetDB: () => void;
+  onRefreshData?: () => void;
 }
 
 export default function AdminDashboard({
@@ -45,7 +46,8 @@ export default function AdminDashboard({
   onDeleteTenant,
   onUpdateBookingStatus,
   onUpdatePaymentStatus,
-  onResetDB
+  onResetDB,
+  onRefreshData
 }: AdminDashboardProps) {
   // Navigation active tab inside ERP
   const [erpTab, setErpTab] = useState<"stats" | "rooms" | "tenants" | "bookings" | "payments" | "reports">("stats");
@@ -98,13 +100,22 @@ export default function AdminDashboard({
   const [copiedSql, setCopiedSql] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
+  // Auto-refresh polling every 4 seconds
+  useEffect(() => {
+    if (!onRefreshData) return;
+    const interval = setInterval(() => {
+      onRefreshData();
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [onRefreshData]);
+
   // Stats calculation
   const totalRooms = rooms.length;
-  const availableRooms = rooms.filter(r => r.status === "tersedia").length;
-  const occupiedRooms = rooms.filter(r => r.status === "terisi").length;
-  const bookedRooms = rooms.filter(r => r.status === "dipesan" || r.status === "BOOKED").length;
+  const availableRooms = rooms.filter(r => r.status === "Tersedia" || r.status === "tersedia").length;
+  const occupiedRooms = rooms.filter(r => r.status === "Terisi" || r.status === "terisi").length;
+  const bookedRooms = rooms.filter(r => r.status === "BOOKED" || r.status === "dipesan").length;
   const totalTenantsCount = tenants.length;
-  const totalPendapatan = payments.reduce((acc, p) => p.status === "approved" ? acc + p.amount : acc, 0);
+  const totalPendapatan = payments.reduce((acc, p) => (p.status === "approved" || p.status === "Paid") ? acc + p.amount : acc, 0);
 
   // Static Data mapping for Charts
   const occupancyChartData = [
@@ -143,7 +154,7 @@ export default function AdminDashboard({
       price_monthly: 1500000,
       price_yearly: 16500000,
       description: "Kamar kos modern dengan tempat tidur luas, AC dingin, Wi-Fi berkecepatan tinggi, dan penataan sirkulasi udara luar biasa.",
-      status: "tersedia",
+      status: "Tersedia",
       wifi: true,
       bathroom_inside: true,
       electricity_token: true,
@@ -485,15 +496,15 @@ CREATE TABLE IF NOT EXISTS rooms (
                         </td>
                         <td className="py-3.5 px-4">
                           <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                            room.status === "tersedia" 
+                            (room.status === "Tersedia" || room.status === "tersedia")
                               ? "bg-emerald-100 text-emerald-800"
                               : room.status === "BOOKED"
                               ? "bg-indigo-100 text-indigo-800"
-                              : room.status === "dipesan"
-                              ? "bg-amber-100 text-amber-800"
-                              : "bg-slate-100 text-slate-650"
+                              : (room.status === "Terisi" || room.status === "terisi")
+                              ? "bg-slate-100 text-slate-650"
+                              : "bg-amber-100 text-amber-800"
                           }`}>
-                            {room.status}
+                            {room.status === "tersedia" ? "Tersedia" : room.status === "terisi" ? "Terisi" : room.status === "dipesan" ? "BOOKED" : room.status}
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-right flex gap-2 justify-end">
@@ -649,31 +660,31 @@ CREATE TABLE IF NOT EXISTS rooms (
                           </td>
                           <td className="py-3.5 px-4">
                             <span className={`px-2 py-0.5 rounded-[4px] text-[10px] font-bold ${
-                              b.status === "confirmed" 
+                              (b.status === "confirmed" || b.status === "Approved" || b.status === "Completed")
                                 ? "bg-emerald-100 text-emerald-800"
-                                : b.status === "rejected"
+                                : (b.status === "rejected" || b.status === "Rejected")
                                 ? "bg-rose-100 text-rose-800"
                                 : "bg-amber-100 text-amber-800"
                             }`}>
-                              {b.status === "confirmed" ? "Disetujui" : b.status === "rejected" ? "Ditolak" : "Menunggu Persetujuan"}
+                              {(b.status === "confirmed" || b.status === "Approved") ? "Disetujui" : b.status === "Completed" ? "Selesai" : (b.status === "rejected" || b.status === "Rejected") ? "Ditolak" : "Menunggu Persetujuan"}
                             </span>
                           </td>
                           <td className="py-3.5 px-4 text-right">
-                            {b.status === "pending" ? (
+                            {(b.status === "pending" || b.status === "Pending Approval") ? (
                               <div className="flex gap-1.5 justify-end">
                                 <button
-                                  onClick={() => onUpdateBookingStatus(b.id, "confirmed")}
+                                  onClick={() => onUpdateBookingStatus(b.id, "Approved")}
                                   className="p-1 px-2 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold"
-                                  title="Terima Booking"
+                                  title="Approve Booking"
                                 >
-                                  Disetujui
+                                  Approve
                                 </button>
                                 <button
-                                  onClick={() => onUpdateBookingStatus(b.id, "rejected")}
+                                  onClick={() => onUpdateBookingStatus(b.id, "Rejected")}
                                   className="p-1 px-2 rounded bg-rose-50 hover:bg-rose-100 text-rose-600"
-                                  title="Tolak Booking"
+                                  title="Reject Booking"
                                 >
-                                  Tolak
+                                  Reject
                                 </button>
                               </div>
                             ) : (
@@ -743,9 +754,9 @@ CREATE TABLE IF NOT EXISTS rooms (
                                 <EyeIcon className="w-3.5 h-3.5" />
                                 Lihat Bukti
                               </button>
-                            ) : p.meetup_date ? (
+                            ) : (p.meetup_date || p.meeting_date) ? (
                               <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1 font-semibold text-[11px]">
-                                🤝 Janji: {p.meetup_date}
+                                🤝 Janji: {p.meetup_date || p.meeting_date}
                               </span>
                             ) : (
                               <span className="text-slate-300">Tidak Ada</span>
@@ -757,30 +768,30 @@ CREATE TABLE IF NOT EXISTS rooms (
                           </td>
                           <td className="py-3.5 px-4">
                             <span className={`px-2 py-0.5 rounded-[4px] text-[10px] font-bold ${
-                              p.status === "approved" 
+                              (p.status === "approved" || p.status === "Paid")
                                 ? "bg-emerald-100 text-emerald-850"
-                                : p.status === "rejected"
+                                : (p.status === "rejected" || p.status === "Rejected")
                                 ? "bg-rose-100 text-rose-850"
                                 : "bg-amber-100 text-amber-850"
                             }`}>
-                              {p.status}
+                              {p.status === "Paid" ? "Lunas" : p.status === "Waiting Verification" ? "Menunggu Verifikasi" : p.status === "Rejected" ? "Ditolak" : p.status}
                             </span>
                           </td>
                           <td className="py-3.5 px-4 text-right">
-                            {p.status === "pending" ? (
+                            {(p.status === "pending" || p.status === "Waiting Verification") ? (
                               <div className="flex gap-1.5 justify-end">
                                 <button
-                                  onClick={() => onUpdatePaymentStatus(p.id, "approved")}
+                                  onClick={() => onUpdatePaymentStatus(p.id, "Paid")}
                                   className="p-1 px-2.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold"
-                                  title="Approve setoran"
+                                  title="Approve Pembayaran"
                                 >
-                                  Lunas
+                                  Approve
                                 </button>
                                 <button
-                                  onClick={() => onUpdatePaymentStatus(p.id, "rejected")}
+                                  onClick={() => onUpdatePaymentStatus(p.id, "Rejected")}
                                   className="p-1 px-2 rounded bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold"
                                 >
-                                  Tolak
+                                  Reject
                                 </button>
                               </div>
                             ) : (
@@ -1076,9 +1087,9 @@ CREATE TABLE IF NOT EXISTS rooms (
                       value={roomForm.status}
                       onChange={(e) => setRoomForm({ ...roomForm, status: e.target.value as any })}
                     >
-                      <option value="tersedia">Tersedia</option>
-                      <option value="dipesan">Dipesan</option>
-                      <option value="terisi">Terisi</option>
+                      <option value="Tersedia">Tersedia</option>
+                      <option value="BOOKED">BOOKED</option>
+                      <option value="Terisi">Terisi</option>
                     </select>
                   </div>
                 </div>

@@ -92,6 +92,7 @@ CREATE TABLE payments (
   amount DECIMAL(12,2) NOT NULL,
   payment_method VARCHAR(50) NOT NULL,
   proof_image VARCHAR(255),
+  meeting_date DATE NULL,
   status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
   billing_month VARCHAR(20) NOT NULL,
   billing_year VARCHAR(4) NOT NULL,

@@ -341,21 +341,44 @@ export default function App() {
   // --- Payment submission ---
   const handlePaymentSubmit = async (paymentData: any) => {
     try {
-      const res = await fetch("/api/payments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...paymentData,
-          user_id: currentUser.id
-        })
-      });
+      let res;
+      if (paymentData.proof_image instanceof File) {
+        const formData = new FormData();
+        formData.append("booking_id", paymentData.booking_id);
+        formData.append("amount", String(paymentData.amount));
+        formData.append("payment_method", paymentData.payment_method);
+        formData.append("proof_image", paymentData.proof_image);
+        formData.append("billing_month", paymentData.billing_month);
+        formData.append("billing_year", paymentData.billing_year);
+        formData.append("user_id", currentUser.id);
+
+        res = await fetch("/api/payments", {
+          method: "POST",
+          body: formData
+        });
+      } else {
+        res = await fetch("/api/payments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...paymentData,
+            meeting_date: paymentData.meeting_date || paymentData.meetup_date,
+            user_id: currentUser.id
+          })
+        });
+      }
 
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast("Bukti pembayaran berhasil diunggah! Sedang diverifikasi.", "success");
+        showToast(
+          paymentData.payment_method === "Cash Langsung" || paymentData.payment_method === "Cash"
+            ? "Janji temu pembayaran Cash berhasil diajukan!"
+            : "Bukti pembayaran berhasil diunggah! Sedang diverifikasi.",
+          "success"
+        );
         fetchAllData();
       } else {
-        showToast("Gagal menyimpan bukti pembayaran.", "error");
+        showToast(data.message || "Gagal menyimpan bukti pembayaran.", "error");
       }
     } catch (err) {
       showToast("Kesalahan koneksi pengunggahan kuitansi.", "error");
@@ -632,6 +655,7 @@ export default function App() {
                 onUpdateBookingStatus={handleUpdateBookingStatus}
                 onUpdatePaymentStatus={handleUpdatePaymentStatus}
                 onResetDB={handleResetDB}
+                onRefreshData={fetchAllData}
               />
             </motion.div>
           )}

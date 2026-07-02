@@ -178,13 +178,13 @@ export default function RoomDetail({
           <div className="space-y-4 border-b border-slate-100 dark:border-slate-800 pb-6">
             <div className="flex flex-wrap items-center gap-2">
               <span className={`px-3 py-1 text-xs font-bold rounded-lg text-white uppercase tracking-wider ${
-                room.status === "tersedia" 
+                (room.status === "Tersedia" || room.status === "tersedia")
                   ? "bg-emerald-500 shadow-md shadow-emerald-500/10" 
-                  : (room.status === "dipesan" || room.status === "BOOKED")
+                  : (room.status === "BOOKED" || room.status === "dipesan")
                   ? "bg-amber-500 shadow-md shadow-amber-500/10"
                   : "bg-slate-500 shadow-md shadow-slate-500/10"
               }`}>
-                Kamar {room.status === "tersedia" ? "Tersedia" : (room.status === "dipesan" || room.status === "BOOKED") ? "Dipesan" : "Terisi"}
+                Kamar {(room.status === "Tersedia" || room.status === "tersedia") ? "Tersedia" : (room.status === "BOOKED" || room.status === "dipesan") ? "Dipesan" : "Terisi"}
               </span>
               <span className="px-3 py-1 text-xs font-semibold rounded-lg bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-sky-400">
                 {room.type}
@@ -355,20 +355,20 @@ export default function RoomDetail({
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
-                      if (room.status !== "tersedia") return;
+                      if (room.status !== "Tersedia" && room.status !== "tersedia") return;
                       setIsBookingFormOpen(true);
                     }}
-                    disabled={room.status !== "tersedia"}
+                    disabled={room.status !== "Tersedia" && room.status !== "tersedia"}
                     className={`w-full py-4 rounded-xl text-center font-semibold text-sm transition-all flex items-center justify-center gap-2 shadow-lg ${
-                      room.status === "tersedia"
+                      (room.status === "Tersedia" || room.status === "tersedia")
                         ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:opacity-95 text-white shadow-indigo-500/15"
                         : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed shadow-none"
                     }`}
                   >
                     <span>
-                      {room.status === "tersedia" 
+                      {(room.status === "Tersedia" || room.status === "tersedia")
                         ? "Booking Kamar Sekarang" 
-                        : (room.status === "dipesan" || room.status === "BOOKED")
+                        : (room.status === "BOOKED" || room.status === "dipesan")
                         ? "Kamar Sudah Dipesan" 
                         : "Kamar Saat Ini Terisi"}
                     </span>

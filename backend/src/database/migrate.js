@@ -156,7 +156,7 @@ async function migrate() {
         console.log(`[Migration] Migrating ${dbData.payments.length} payments...`);
         for (const p of dbData.payments) {
           await connection.query(
-            "INSERT INTO payments (id, booking_id, user_id, amount, payment_method, proof_image, status, billing_month, billing_year, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO payments (id, booking_id, user_id, amount, payment_method, proof_image, meeting_date, status, billing_month, billing_year, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
               p.id,
               p.booking_id,
@@ -164,6 +164,7 @@ async function migrate() {
               Number(p.amount) || 0,
               p.payment_method,
               p.proof_image || null,
+              p.meeting_date || null,
               p.status || "pending",
               p.billing_month,
               p.billing_year,

@@ -115,6 +115,7 @@ export default function PenyewaDashboard({
   const [paymentType, setPaymentType] = useState<"transfer" | "cash">("transfer");
   const [meetupDate, setMeetupDate] = useState("");
   const [proofImageBase64, setProofImageBase64] = useState<string | null>(null);
+  const [proofImageFile, setProofImageFile] = useState<File | null>(null);
   const [formError, setFormError] = useState("");
 
   const [savingProfile, setSavingProfile] = useState(false);
@@ -145,7 +146,7 @@ export default function PenyewaDashboard({
   const tenantNotifs = notifications.filter(n => n.user_id === currentUser?.id);
 
   // Calculate unpaid/pending billings
-  const activeUnpaidBookings = tenantBookings.filter(b => b.status !== "rejected");
+  const activeUnpaidBookings = tenantBookings.filter(b => b.status !== "rejected" && b.status !== "Rejected");
 
   const handleProfileSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,7 +176,7 @@ export default function PenyewaDashboard({
     const currentBooking = bookings.find(b => b.id === paymentForm.bookingId);
 
     if (paymentType === "transfer") {
-      if (!proofImageBase64) {
+      if (!proofImageFile) {
         setFormError("Silakan upload file bukti pembayaran Anda dari perangkat.");
         return;
       }
@@ -183,7 +184,7 @@ export default function PenyewaDashboard({
         booking_id: paymentForm.bookingId,
         amount: Number(paymentForm.amount),
         payment_method: paymentForm.paymentMethod,
-        proof_image: proofImageBase64,
+        proof_image: proofImageFile,
         billing_month: new Date().toLocaleString("id-ID", { month: "long" }),
         billing_year: new Date().getFullYear().toString()
       });
@@ -220,6 +221,7 @@ export default function PenyewaDashboard({
     setPaymentType("transfer");
     setMeetupDate("");
     setProofImageBase64(null);
+    setProofImageFile(null);
     setFormError("");
     setUploadPaymentOpen(true);
   };
@@ -622,13 +624,13 @@ export default function PenyewaDashboard({
 
                         <div className="flex flex-col sm:items-end justify-between">
                           <span className={`px-3 py-1 text-xs font-semibold rounded-lg ${
-                            b.status === "confirmed" 
+                            (b.status === "confirmed" || b.status === "Approved" || b.status === "Completed")
                               ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20" 
-                              : b.status === "rejected"
+                              : (b.status === "rejected" || b.status === "Rejected")
                               ? "bg-rose-50 text-rose-500 dark:bg-rose-950/20"
                               : "bg-amber-50 text-amber-500 dark:bg-amber-950/20"
                           }`}>
-                            {b.status === "confirmed" ? "Disetujui" : b.status === "rejected" ? "Ditolak" : "Menunggu Verifikasi"}
+                            {(b.status === "confirmed" || b.status === "Approved") ? "Disetujui" : b.status === "Completed" ? "Selesai" : (b.status === "rejected" || b.status === "Rejected") ? "Ditolak" : "Menunggu Persetujuan"}
                           </span>
                           <span className="text-[10px] text-slate-400 font-mono mt-1">
                             Diajukan: {new Date(b.created_at).toLocaleDateString()}
@@ -669,19 +671,19 @@ export default function PenyewaDashboard({
                               <p className="font-semibold text-xs text-slate-800 dark:text-slate-200">Jumlah tagihan: Rp {b.total_price.toLocaleString()}</p>
                             </div>
 
-                            {b.status === "pending" ? (
+                            {(b.status === "pending" || b.status === "Pending Approval") ? (
                               <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 dark:bg-amber-950/20 px-2.5 py-1 rounded-lg">
                                 Menunggu Persetujuan Booking Admin
                               </span>
                             ) : alreadyPaid ? (
                               <span className={`text-[11px] font-bold px-2.5 py-1.5 rounded-lg border capitalize ${
-                                alreadyPaid.status === "approved" 
+                                (alreadyPaid.status === "approved" || alreadyPaid.status === "Paid")
                                   ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/30" 
-                                  : alreadyPaid.status === "rejected"
+                                  : (alreadyPaid.status === "rejected" || alreadyPaid.status === "Rejected")
                                   ? "bg-rose-50 text-rose-500 border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/30"
                                   : "bg-amber-50 text-amber-500 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/30"
                               }`}>
-                                Pembayaran {alreadyPaid.status === "approved" ? "Disetujui (Lunas)" : alreadyPaid.status === "rejected" ? "Ditolak" : "Verifikasi Admin"}
+                                Pembayaran {(alreadyPaid.status === "approved" || alreadyPaid.status === "Paid") ? "Lunas" : (alreadyPaid.status === "rejected" || alreadyPaid.status === "Rejected") ? "Ditolak" : "Verifikasi Admin"}
                               </span>
                             ) : (
                               <button
@@ -719,13 +721,13 @@ export default function PenyewaDashboard({
                           <div className="text-right space-y-1">
                             <p className="font-bold text-slate-900 dark:text-slate-50">Rp {p.amount.toLocaleString()}</p>
                             <span className={`inline-block px-1.5 py-0.5 rounded-[4px] text-[9px] font-bold ${
-                              p.status === "approved" 
+                              (p.status === "approved" || p.status === "Paid")
                                 ? "bg-emerald-100 text-emerald-800" 
-                                : p.status === "rejected" 
+                                : (p.status === "rejected" || p.status === "Rejected")
                                 ? "bg-rose-100 text-rose-800" 
                                 : "bg-amber-100 text-amber-850"
                             }`}>
-                              {p.status}
+                              {p.status === "Paid" ? "Lunas" : p.status === "Waiting Verification" ? "Menunggu Verifikasi" : p.status === "Rejected" ? "Ditolak" : p.status}
                             </span>
                           </div>
                         </div>
@@ -913,11 +915,15 @@ export default function PenyewaDashboard({
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) {
+                            setProofImageFile(file);
                             const reader = new FileReader();
                             reader.onloadend = () => {
                               setProofImageBase64(reader.result as string);
                             };
                             reader.readAsDataURL(file);
+                          } else {
+                            setProofImageFile(null);
+                            setProofImageBase64(null);
                           }
                         }}
                         required
