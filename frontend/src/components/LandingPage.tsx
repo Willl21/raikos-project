@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { 
-  Wifi, Shield, Zap, Droplet, Train, Eye, ArrowRight, Star, MapPin, 
+import {
+  Wifi, Shield, Zap, Droplet, Train, Eye, ArrowRight, Star, MapPin,
   ChevronLeft, ChevronRight, Inbox, Bath, Car, Heart
 } from "lucide-react";
 import { Room } from "../types";
@@ -69,7 +69,7 @@ export default function LandingPage({ rooms, onSelectRoom, isLoading }: LandingP
       <section className="relative overflow-hidden pt-12 pb-20 lg:pt-20 lg:pb-32 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           {/* Hero text */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
@@ -78,9 +78,9 @@ export default function LandingPage({ rooms, onSelectRoom, isLoading }: LandingP
             <div className="inline-block px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-sky-400 rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-blue-100 dark:border-blue-900/30">
               #1 Property Management System • Jatibening Bekasi
             </div>
-            
+
             <h1 className="font-display font-extrabold text-4xl sm:text-5xl lg:text-6.5xl text-slate-900 dark:text-slate-100 tracking-tight leading-[1.1] mb-4">
-              Temukan Hunian Nyaman <br/>
+              Temukan Hunian Nyaman <br />
               <span className="text-blue-600 dark:text-sky-400 underline decoration-indigo-200 dark:decoration-indigo-850 underline-offset-8">
                 Bersama Raikos
               </span>
@@ -124,7 +124,7 @@ export default function LandingPage({ rooms, onSelectRoom, isLoading }: LandingP
             <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 to-violet-500/10 rounded-2xl blur-xl -z-10" />
             <div className="overflow-hidden rounded-2xl border border-white/60 dark:border-slate-800 shadow-2xl">
               <img
-                src="https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&q=80&w=800"
+                src="/kosan1/depan.jpg"
                 alt="Elite Boarding House Room"
                 className="w-full aspect-[4/3] object-cover hover:scale-105 transition-transform duration-700"
                 referrerPolicy="no-referrer"
@@ -216,16 +216,15 @@ export default function LandingPage({ rooms, onSelectRoom, isLoading }: LandingP
 
                       {/* Status Badges */}
                       <div className="absolute top-4 left-4 flex flex-col gap-1.5">
-                        <span className={`px-2.5 py-1 text-[11px] font-bold rounded-lg text-white uppercase tracking-wider shadow ${
-                          (room.status === "Tersedia" || room.status === "tersedia")
-                            ? "bg-gradient-to-r from-emerald-500 to-green-600 shadow-emerald-500/10" 
+                        <span className={`px-2.5 py-1 text-[11px] font-bold rounded-lg text-white uppercase tracking-wider shadow ${(room.status === "Tersedia" || room.status === "tersedia")
+                            ? "bg-gradient-to-r from-emerald-500 to-green-600 shadow-emerald-500/10"
                             : (room.status === "BOOKED" || room.status === "dipesan")
-                            ? "bg-gradient-to-r from-amber-500 to-orange-600 shadow-amber-500/10"
-                            : "bg-gradient-to-r from-slate-500 to-slate-700 shadow-slate-500/10"
-                        }`}>
+                              ? "bg-gradient-to-r from-amber-500 to-orange-600 shadow-amber-500/10"
+                              : "bg-gradient-to-r from-slate-500 to-slate-700 shadow-slate-500/10"
+                          }`}>
                           {(room.status === "Tersedia" || room.status === "tersedia") ? "Tersedia" : (room.status === "BOOKED" || room.status === "dipesan") ? "Dipesan" : "Terisi"}
                         </span>
-                        
+
                         <span className="px-2 py-0.5 text-[10px] font-semibold rounded-md bg-white/90 text-slate-800 w-fit backdrop-blur">
                           {room.type}
                         </span>
@@ -250,7 +249,6 @@ export default function LandingPage({ rooms, onSelectRoom, isLoading }: LandingP
 
                         {/* Facilities Inline icons */}
                         <div className="flex items-center gap-3 mt-2 mb-4 text-slate-400">
-                          {room.wifi && <Wifi className="w-4 h-4 text-blue-500" title="Wi-Fi" />}
                           {room.bathroom_inside && <Droplet className="w-4 h-4 text-sky-500" title="Kamar Mandi Dalam" />}
                           {room.electricity_token && <Zap className="w-4 h-4 text-amber-500" title="Listrik Token" />}
                           {room.security && <Shield className="w-4 h-4 text-teal-500" title="Security 24 Jam" />}
@@ -413,11 +411,10 @@ export default function LandingPage({ rooms, onSelectRoom, isLoading }: LandingP
             <button
               key={t.id}
               onClick={() => setActiveTestimonial(idx)}
-              className={`w-2.5 h-2.5 rounded-full transition-all ${
-                activeTestimonial === idx 
-                  ? "bg-indigo-600 dark:bg-sky-400 w-6" 
+              className={`w-2.5 h-2.5 rounded-full transition-all ${activeTestimonial === idx
+                  ? "bg-indigo-600 dark:bg-sky-400 w-6"
                   : "bg-slate-200 dark:bg-slate-800"
-              }`}
+                }`}
             />
           ))}
         </div>

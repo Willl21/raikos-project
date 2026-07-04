@@ -4,6 +4,7 @@ USE raikos_db;
 SET FOREIGN_KEY_CHECKS = 0;
 TRUNCATE TABLE room_images;
 TRUNCATE TABLE payments;
+TRUNCATE TABLE rental_extensions;
 TRUNCATE TABLE bookings;
 TRUNCATE TABLE notifications;
 TRUNCATE TABLE reports;
@@ -22,27 +23,40 @@ INSERT INTO users (id, name, email, password, phone, nik, avatar, uploaded_avata
 ('usr-2', 'Siti Rahma', 'siti@raikos.com', 'penyewa', '08234567890', '3275010203040006', 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150', NULL, NULL, FALSE, 'tenant');
 
 -- 3. Seed Rooms
-INSERT INTO rooms (id, name, type, price_monthly, price_yearly, description, status, wifi, bathroom_inside, electricity_token, water_independent, lrt_nearby, parking_area, security) VALUES
-('rm-1', 'Kamar Suite Deluxe #101', 'Kamar Mandi Dalam', 2200000.00, 24000000.00, 'Kamar kos premium berukuran 4x4m dengan desain industrial modern. Sangat cocok bagi profesional maupun mahasiswa yang mendambakan privasi dan lingkungan belajar/kerja yang tenang.', 'terisi', TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE),
-('rm-2', 'Standard Cozy #102', 'Kamar Mandi Dalam', 1800000.00, 19500000.00, 'Kamar minimalis modern berukuran 3x4m, sudah termasuk kasur springbed berkualitas, lemari pakaian 2 pintu, dan meja kerja kayu yang stylish. Jaringan Wi-Fi super cepat.', 'tersedia', TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE),
-('rm-3', 'Mezzanine Loft Space #201', 'Kamar Mandi Dalam', 2800000.00, 30000000.00, 'Kamar loteng mewah ala apartemen studio berukuran 4x5m dengan tangga kayu menuju platform kasur mezzanine. Area bawah dapat difungsikan maksimal untuk ruang santai atau kantor pribadi.', 'dipesan', TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE),
-('rm-4', 'Compact Minimalist #202', 'Kamar Mandi Luar', 1200000.00, 13000000.00, 'Kamar kos ekonomis berukuran 3x3m yang bersih, rapi, dan fungsional. Dilengkapi jendela besar untuk pencahayaan alami yang sehat. Kamar mandi luar premium dibersihkan berkala oleh petugas kos.', 'tersedia', TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE),
-('rm-5', 'Executive Suite Balkon #301', 'Kamar Mandi Dalam', 3200000.00, 35000000.00, 'Kamar eksklusif paling luas di lantai teratas dengan balkon pribadi menghadap kota. Dilengkapi smart tv, mini kulkas, kamar mandi dalam dengan water heater, AC, dan sirkulasi udara luar biasa.', 'tersedia', TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE);
+INSERT INTO rooms (id, name, type, price_monthly, price_yearly, description, status, bathroom_inside, electricity_token, water_independent, lrt_nearby, parking_area, security) VALUES
+('rm-1', 'Kamar Kos Al Marzukiah #101', 'Kamar Mandi Dalam', 2200000.00, 24000000.00, 'Kamar kos premium berukuran 4x4m dengan desain industrial modern. Sangat cocok bagi profesional maupun mahasiswa yang mendambakan privasi dan lingkungan belajar/kerja yang tenang.', 'terisi', TRUE, TRUE, TRUE, TRUE, TRUE, TRUE ),
+('rm-2', 'Standard Cozy #102', 'Kamar Mandi Dalam', 1800000.00, 19500000.00, 'Kamar minimalis modern berukuran 3x4m, sudah termasuk kasur springbed berkualitas, lemari pakaian 2 pintu, dan meja kerja kayu yang stylish. Jaringan Wi-Fi super cepat.', 'tersedia', TRUE, TRUE, TRUE, FALSE, TRUE, TRUE),
+('rm-3', 'Mezzanine Loft Space #201', 'Kamar Mandi Dalam', 2800000.00, 30000000.00, 'Kamar loteng mewah ala apartemen studio berukuran 4x5m dengan tangga kayu menuju platform kasur mezzanine. Area bawah dapat difungsikan maksimal untuk ruang santai atau kantor pribadi.', 'dipesan', TRUE, TRUE, TRUE, TRUE, TRUE, TRUE),
+('rm-4', 'Compact Minimalist #202', 'Kamar Mandi Luar', 1200000.00, 13000000.00, 'Kamar kos ekonomis berukuran 3x3m yang bersih, rapi, dan fungsional. Dilengkapi jendela besar untuk pencahayaan alami yang sehat. Kamar mandi luar premium dibersihkan berkala oleh petugas kos.', 'tersedia', TRUE, FALSE, TRUE, FALSE, TRUE, TRUE),
+('rm-5', 'Executive Suite Balkon #301', 'Kamar Mandi Dalam', 3200000.00, 35000000.00, 'Kamar eksklusif paling luas di lantai teratas dengan balkon pribadi menghadap kota. Dilengkapi smart tv, mini kulkas, kamar mandi dalam dengan water heater, AC, dan sirkulasi udara luar biasa.', 'tersedia', TRUE, TRUE, TRUE, TRUE, TRUE, TRUE);
 
 -- 4. Seed Room Images
 INSERT INTO room_images (room_id, image_url) VALUES
-('rm-1', 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&q=80&w=800'),
-('rm-1', 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&q=80&w=800'),
-('rm-1', 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&q=80&w=800'),
-('rm-2', 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&q=80&w=800'),
-('rm-2', 'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&q=80&w=800'),
-('rm-3', 'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&q=80&w=800'),
-('rm-3', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&q=80&w=800'),
-('rm-3', 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&q=80&w=800'),
-('rm-4', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&q=80&w=800'),
-('rm-4', 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&q=80&w=800'),
-('rm-5', 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&q=80&w=800'),
-('rm-5', 'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&q=80&w=800');
+('rm-1', '/kosan1/depan.jpg'),
+('rm-1', '/kosan1/pintu_masuk.jpg'),
+('rm-1', '/kosan1/lantai_dua.jpg'),
+('rm-1', '/kosan1/ruangan.jpg'),
+('rm-1', '/kosan1/dapur.jpg'),
+('rm-2', '/kosan1/depan.jpg'),
+('rm-2', '/kosan1/pintu_masuk.jpg'),
+('rm-2', '/kosan1/lantai_dua.jpg'),
+('rm-2', '/kosan1/ruangan.jpg'),
+('rm-2', '/kosan1/dapur.jpg'),
+('rm-3', '/kosan1/depan.jpg'),
+('rm-3', '/kosan1/pintu_masuk.jpg'),
+('rm-3', '/kosan1/lantai_dua.jpg'),
+('rm-3', '/kosan1/ruangan.jpg'),
+('rm-3', '/kosan1/dapur.jpg'),
+('rm-4', '/kosan1/depan.jpg'),
+('rm-4', '/kosan1/pintu_masuk.jpg'),
+('rm-4', '/kosan1/lantai_dua.jpg'),
+('rm-4', '/kosan1/ruangan.jpg'),
+('rm-4', '/kosan1/dapur.jpg'),
+('rm-5', '/kosan1/depan.jpg'),
+('rm-5', '/kosan1/pintu_masuk.jpg'),
+('rm-5', '/kosan1/lantai_dua.jpg'),
+('rm-5', '/kosan1/ruangan.jpg'),
+('rm-5', '/kosan1/dapur.jpg');
 
 -- 5. Seed Bookings
 INSERT INTO bookings (id, user_id, room_id, name, email, phone, nik, entry_date, duration_months, total_price, status, created_at) VALUES

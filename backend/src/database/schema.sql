@@ -5,6 +5,7 @@ USE raikos_db;
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS room_images;
 DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS rental_extensions;
 DROP TABLE IF EXISTS bookings;
 DROP TABLE IF EXISTS notifications;
 DROP TABLE IF EXISTS reports;
@@ -77,6 +78,7 @@ CREATE TABLE bookings (
   duration_months INT NOT NULL,
   total_price DECIMAL(12,2) NOT NULL,
   status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'confirmed', 'rejected'
+  will_not_extend BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
@@ -84,11 +86,30 @@ CREATE TABLE bookings (
   INDEX idx_room_id (room_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 6. Payments Table
+-- 6. Rental Extensions Table
+CREATE TABLE rental_extensions (
+  id VARCHAR(50) PRIMARY KEY,
+  booking_id VARCHAR(50) NOT NULL,
+  user_id VARCHAR(50) NOT NULL,
+  room_id VARCHAR(50) NOT NULL,
+  duration_months INT NOT NULL,
+  amount DECIMAL(12,2) NOT NULL,
+  status VARCHAR(20) DEFAULT 'pending_payment', -- 'pending_payment', 'waiting_verification', 'approved', 'rejected'
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+  INDEX idx_booking_id (booking_id),
+  INDEX idx_user_id (user_id),
+  INDEX idx_room_id (room_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 7. Payments Table
 CREATE TABLE payments (
   id VARCHAR(50) PRIMARY KEY,
   booking_id VARCHAR(50) NOT NULL,
   user_id VARCHAR(50) NOT NULL,
+  extension_id VARCHAR(50) NULL,
   amount DECIMAL(12,2) NOT NULL,
   payment_method VARCHAR(50) NOT NULL,
   proof_image VARCHAR(255),
@@ -99,8 +120,10 @@ CREATE TABLE payments (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (extension_id) REFERENCES rental_extensions(id) ON DELETE CASCADE,
   INDEX idx_booking_id (booking_id),
-  INDEX idx_user_id (user_id)
+  INDEX idx_user_id (user_id),
+  INDEX idx_extension_id (extension_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 7. Notifications Table

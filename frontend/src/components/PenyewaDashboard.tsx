@@ -5,13 +5,16 @@ import {
   FileText, ShieldCheck, DollarSign, Compass, MessageSquare, AlertCircle, RefreshCw, X,
   Camera, RotateCcw, Trash2
 } from "lucide-react";
-import { Booking, Payment, Notification } from "../types";
+import { Booking, Payment, Notification, RentalExtension } from "../types";
 
 interface PenyewaDashboardProps {
   currentUser: any;
   bookings: Booking[];
   payments: Payment[];
   notifications: Notification[];
+  extensions: RentalExtension[];
+  onExtendRental: (bookingId: string, durationMonths: number) => void;
+  onSetWillNotExtend: (bookingId: string, willNotExtend: boolean) => void;
   onUpdateProfile: (updatedData: any) => void;
   onSubmitPayment: (paymentData: any) => void;
   onMarkNotificationRead: (id: string) => void;
@@ -27,6 +30,9 @@ export default function PenyewaDashboard({
   bookings,
   payments,
   notifications,
+  extensions = [],
+  onExtendRental,
+  onSetWillNotExtend,
   onUpdateProfile,
   onSubmitPayment,
   onMarkNotificationRead,
@@ -117,6 +123,7 @@ export default function PenyewaDashboard({
   const [uploadPaymentOpen, setUploadPaymentOpen] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
     bookingId: "",
+    extensionId: "",
     amount: 0,
     paymentMethod: "Transfer Bank BCA",
     proofImage: ""
@@ -128,6 +135,52 @@ export default function PenyewaDashboard({
   const [formError, setFormError] = useState("");
 
   const [savingProfile, setSavingProfile] = useState(false);
+
+  // State for renewal modal
+  const [renewModalOpen, setRenewModalOpen] = useState(false);
+  const [renewForm, setRenewForm] = useState({
+    bookingId: "",
+    roomName: "",
+    currentEndDate: "",
+    durationMonths: 1
+  });
+
+  const openRenewModal = (b: Booking) => {
+    const targetRoom = roomsLookup[b.room_id];
+    const entryDate = new Date(b.entry_date);
+    const endDate = new Date(entryDate.getFullYear(), entryDate.getMonth() + Number(b.duration_months), entryDate.getDate());
+    const formattedEndDate = endDate.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+
+    setRenewForm({
+      bookingId: b.id,
+      roomName: targetRoom ? targetRoom.name : "Kamar No. " + b.room_id,
+      currentEndDate: formattedEndDate,
+      durationMonths: 1
+    });
+    setRenewModalOpen(true);
+  };
+
+  const handleRenewSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onExtendRental(renewForm.bookingId, renewForm.durationMonths);
+    setRenewModalOpen(false);
+  };
+
+  const selectExtensionForPayment = (ext: RentalExtension) => {
+    setPaymentForm({
+      bookingId: ext.booking_id,
+      extensionId: ext.id,
+      amount: Number(ext.amount),
+      paymentMethod: "Transfer Bank BCA",
+      proofImage: ""
+    });
+    setPaymentType("transfer");
+    setMeetupDate("");
+    setProofImageBase64(null);
+    setProofImageFile(null);
+    setFormError("");
+    setUploadPaymentOpen(true);
+  };
 
   // Sync profileForm if user changes
   React.useEffect(() => {
@@ -153,9 +206,36 @@ export default function PenyewaDashboard({
   const tenantBookings = bookings.filter(b => b.user_id === currentUser?.id);
   const tenantPayments = payments.filter(p => p.user_id === currentUser?.id);
   const tenantNotifs = notifications.filter(n => n.user_id === currentUser?.id);
+  const tenantExtensions = extensions.filter(e => e.user_id === currentUser?.id);
+
+  // Ongoing bookings (Pending Approval, Approved but not fully paid, etc.)
+  const ongoingBookings = tenantBookings.filter(b =>
+    b.status === "Pending Approval" || b.status === "pending" || b.status === "Approved" || b.status === "Rejected" || b.status === "rejected"
+  );
+
+  // Active / Completed Rentals (Completed, Expired)
+  const activeRentals = tenantBookings.filter(b => b.status === "Completed");
+  const expiredRentals = tenantBookings.filter(b => b.status === "Expired");
 
   // Calculate unPaid/pending billings
-  const activeUnPaidBookings = tenantBookings.filter(b => b.status !== "rejected" && b.status !== "Rejected");
+  const activeUnPaidBookings = tenantBookings.filter(b => b.status !== "rejected" && b.status !== "Rejected" && b.status !== "Expired");
+
+  // Calculate active billing amount (original + extensions)
+  const activeBookingBillingAmount = tenantBookings.reduce((sum, b) => {
+    if (b.status === "pending" || b.status === "Pending Approval" || b.status === "rejected" || b.status === "Rejected" || b.status === "Expired") return sum;
+    const payment = tenantPayments.find(p => p.booking_id === b.id && !p.extension_id);
+    if (payment && payment.status === "Paid") {
+      return sum;
+    }
+    return sum + b.total_price;
+  }, 0);
+
+  const activeExtensionBillingAmount = tenantExtensions.reduce((sum, ext) => {
+    if (ext.status !== "pending_payment") return sum;
+    return sum + ext.amount;
+  }, 0);
+
+  const activeBillingAmount = activeBookingBillingAmount + activeExtensionBillingAmount;
 
   const handleProfileSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,6 +271,7 @@ export default function PenyewaDashboard({
       }
       onSubmitPayment({
         booking_id: paymentForm.bookingId,
+        extension_id: paymentForm.extensionId || null,
         amount: Number(paymentForm.amount),
         payment_method: paymentForm.paymentMethod,
         proof_image: proofImageFile,
@@ -209,6 +290,7 @@ export default function PenyewaDashboard({
       }
       onSubmitPayment({
         booking_id: paymentForm.bookingId,
+        extension_id: paymentForm.extensionId || null,
         amount: Number(paymentForm.amount),
         payment_method: "Cash Langsung",
         meetup_date: meetupDate,
@@ -223,6 +305,7 @@ export default function PenyewaDashboard({
   const selectBookingForPayment = (b: Booking) => {
     setPaymentForm({
       bookingId: b.id,
+      extensionId: "",
       amount: b.total_price,
       paymentMethod: "Transfer Bank BCA",
       proofImage: ""
@@ -339,8 +422,8 @@ export default function PenyewaDashboard({
                   <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 rounded-2xl shadow-sm flex items-center justify-between">
                     <div>
                       <span className="text-[10px] text-slate-400 uppercase tracking-widest font-mono font-bold">Tagihan Aktif</span>
-                      <p className="text-xl font-extrabold text-indigo-600 dark:text-sky-400">
-                        {tenantBookings.some(b => b.status === "pending") ? "1 Kamar Menunggu" : "Lunas / Tidak Ada"}
+                      <p className="text-lg font-extrabold text-indigo-600 dark:text-sky-400 mt-1">
+                        {activeBillingAmount > 0 ? `Rp ${activeBillingAmount.toLocaleString()}` : "Lunas / Tidak Ada"}
                       </p>
                     </div>
                     <div className="h-10 w-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/10 text-indigo-500 flex items-center justify-center">
@@ -361,87 +444,263 @@ export default function PenyewaDashboard({
                     </div>
                   </div>
                 </div>
+                {/* 1. AKTIVITAS BOOKING TERBARU */}
+                {ongoingBookings.length > 0 && (
+                  <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+                    <h3 className="font-display font-semibold text-lg text-slate-900 dark:text-slate-100">
+                      Aktivitas Booking
+                    </h3>
+                    <div className="space-y-4">
+                      {ongoingBookings.map(booking => {
+                        const targetRoom = roomsLookup[booking.room_id];
 
-                {/* Main Overview: Active Rooms Booking status */}
+                        if (booking.status === "Rejected" || booking.status === "rejected") {
+                          return (
+                            <div key={booking.id} className="p-6 rounded-2xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                              <div className="text-left space-y-1">
+                                <span className="px-2 py-0.5 text-[10px] font-bold rounded capitalize bg-rose-100 text-rose-700">
+                                  Status: Booking Ditolak
+                                </span>
+                                <h4 className="font-bold text-sm text-slate-855 dark:text-slate-100 mt-2">
+                                  {targetRoom ? targetRoom.name : "Kamar No. " + booking.room_id}
+                                </h4>
+                                <p className="text-xs text-slate-400">
+                                  Silakan cari kamar kos impian Anda yang lain di katalog halaman depan kami.
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        if (booking.status === "Pending Approval" || booking.status === "pending") {
+                          return (
+                            <div key={booking.id} className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-850 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                              <div className="text-left space-y-1">
+                                <span className="px-2 py-0.5 text-[10px] font-bold rounded capitalize bg-amber-100 text-amber-700">
+                                  Status: Menunggu Persetujuan Booking
+                                </span>
+                                <h4 className="font-bold text-sm text-slate-855 dark:text-slate-100 mt-2">
+                                  {targetRoom ? targetRoom.name : "Kamar No. " + booking.room_id}
+                                </h4>
+                                <p className="text-xs text-slate-400">
+                                  Diajukan pada: {new Date(booking.created_at).toLocaleDateString("id-ID")}
+                                </p>
+                                <p className="text-xs text-slate-450 mt-1 leading-relaxed">
+                                  Admin sedang memverifikasi data diri Anda. Harap tunggu persetujuan reservasi sebelum melanjutkan pembayaran.
+                                </p>
+                              </div>
+                              <div className="text-[11px] font-semibold text-amber-600 bg-amber-50 dark:bg-amber-950/20 px-3.5 py-2 rounded-xl shrink-0">
+                                Menunggu Verifikasi Admin
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        if (booking.status === "Approved") {
+                          const alreadyPaid = tenantPayments.find(p => p.booking_id === booking.id && !p.extension_id);
+                          const isPaidPending = alreadyPaid && (alreadyPaid.status === "pending" || alreadyPaid.status === "Waiting Verification");
+                          const isPaidRejected = alreadyPaid && (alreadyPaid.status === "rejected" || alreadyPaid.status === "Rejected");
+
+                          return (
+                            <div key={booking.id} className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-850 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                              <div className="text-left space-y-1">
+                                <span className={`px-2 py-0.5 text-[10px] font-bold rounded capitalize ${isPaidPending ? "bg-amber-100 text-amber-750" : isPaidRejected ? "bg-rose-100 text-rose-750" : "bg-indigo-100 text-indigo-750"
+                                  }`}>
+                                  Status: {isPaidPending ? "Menunggu Verifikasi Pembayaran" : isPaidRejected ? "Pembayaran Ditolak" : "Menunggu Pembayaran"}
+                                </span>
+                                <h4 className="font-bold text-sm text-slate-855 dark:text-slate-100 mt-2">
+                                  {targetRoom ? targetRoom.name : "Kamar No. " + booking.room_id}
+                                </h4>
+                                <p className="text-xs text-slate-400 mt-0.5">Tgl Masuk: {booking.entry_date} ({booking.duration_months} bln)</p>
+                                <p className="font-semibold text-xs text-slate-800 dark:text-slate-205 mt-0.5">
+                                  Jumlah tagihan: Rp {booking.total_price.toLocaleString()}
+                                </p>
+
+                                {isPaidPending && (
+                                  <p className="text-[10px] text-indigo-650 dark:text-indigo-400 font-semibold mt-1">
+                                    Bukti pembayaran Anda sedang diperiksa oleh admin
+                                  </p>
+                                )}
+                                {isPaidRejected && (
+                                  <p className="text-[10px] text-rose-600 dark:text-rose-455 font-semibold mt-1">
+                                    Pembayaran ditolak. Silakan unggah ulang bukti pembayaran yang valid.
+                                  </p>
+                                )}
+                              </div>
+                              <div className="shrink-0 mt-3 sm:mt-0">
+                                {isPaidPending ? (
+                                  <div className="text-[11px] font-semibold text-amber-600 bg-amber-50 dark:bg-amber-950/20 px-3.5 py-2 rounded-xl">
+                                    Verifikasi Pembayaran
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => selectBookingForPayment(booking)}
+                                    className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:opacity-90 rounded-xl shadow transition cursor-pointer"
+                                  >
+                                    Lakukan Pembayaran
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return null;
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. STATUS HUNIAN AKTIF */}
                 <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
                   <h3 className="font-display font-semibold text-lg text-slate-900 dark:text-slate-100">
                     Status Hunian Aktif Anda
                   </h3>
 
-                  {tenantBookings.length === 0 ? (
+                  {activeRentals.length === 0 && expiredRentals.length === 0 && (
                     <div className="text-center py-12 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col items-center justify-center gap-3">
-                      <Compass className="w-10 h-10 text-slate-300" />
-                      <div>
-                        <p className="font-semibold text-slate-700 dark:text-slate-300">Belum Ada Kamar Dipesan</p>
-                        <p className="text-slate-400 text-xs mt-0.5">Silakan telusuri beranda kami untuk memesan Kamar Kos pertama Anda.</p>
+                      <Compass className="w-10 h-10 text-slate-350" />
+                      <div className="space-y-1">
+                        <p className="text-[10px] text-slate-405 uppercase font-mono tracking-wider font-bold">Status: Belum Menyewa</p>
+                        <h4 className="font-bold text-slate-700 dark:text-slate-300">Anda belum memiliki hunian aktif</h4>
+                        <p className="text-slate-400 text-xs mt-0.5">Silakan cari kamar kos impian Anda di katalog halaman depan kami.</p>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {tenantBookings.map((b) => {
-                        const targetRoom = roomsLookup[b.room_id];
-                        const alreadyPaid = tenantPayments.find(p => p.booking_id === b.id);
-                        const paidStatus = alreadyPaid?.status; // selalu aman, undefined kalau belum bayar
-                        return (
-                          <div
-                            key={b.id}
-                            className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-850 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
-                          >
-                            <div className="flex gap-3">
-                              {targetRoom && (
-                                <img
-                                  src={targetRoom.images[0]}
-                                  className="w-14 aspect-square object-cover rounded-xl"
-                                  alt="Room image"
-                                />
-                              )}
-                              <div className="text-left">
-                                <h4 className="font-bold text-sm text-slate-850 dark:text-slate-100">
-                                  {targetRoom ? targetRoom.name : "Kamar No. " + b.room_id}
-                                </h4>
-                                <p className="text-xs text-slate-400 mt-0.5">Tgl Masuk: {b.entry_date} ({b.duration_months} bln)</p>
-                                <span className={`inline-block mt-2 px-2 py-0.5 text-[10px] font-bold rounded capitalize ${b.status === "Approved"
-                                  ? "bg-emerald-100 text-emerald-700" :
-                                  b.status === "Completed" ? "bg-emerald-100 text-emerald-700"
-                                    : b.status === "rejected"
-                                      ? "bg-rose-100 text-rose-700"
-                                      : "bg-amber-100 text-amber-700"
-                                  }`}>
-                                  Status Booking: {b.status === "Approved" ? "Disetujui" : b.status === "Completed" ? "Selesai" : b.status === "rejected" ? "Ditolak" : "Menunggu Persetujuan"}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Action billing based on booking status & payment status */}
-                            {b.status === "pending" ? (
-                              <div className="text-[11px] font-semibold text-amber-600 bg-amber-50 dark:bg-amber-950/20 px-3 py-1.5 rounded-lg">
-                                Menunggu Persetujuan Booking Admin
-                              </div>
-                            ) : b.status === "rejected" ? (
-                              <div className="text-[11px] font-semibold text-rose-500 bg-rose-50 dark:bg-rose-950/20 px-3 py-1.5 rounded-lg">
-                                Booking Ditolak
-                              </div>
-                            ) : b.status === "Approved" && (!alreadyPaid || paidStatus === "rejected") ? (
-                              <button
-                                onClick={() => selectBookingForPayment(b)}
-                                className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:opacity-90 rounded-xl shadow transition"
-                              >
-                                Lakukan Pembayaran
-                              </button>
-                            ) : (
-                              <div className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg ${paidStatus === "Paid"
-                                ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20"
-                                : "text-amber-500 bg-amber-50 dark:bg-amber-950/20"
-                                }`}>
-                                {paidStatus === "Paid" ? <ShieldCheck className="w-4 h-4" /> : null}
-                                {paidStatus === "Paid" ? "Terkonfirmasi Lunas" : "Verifikasi Pembayaran"}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                      <button
+                        onClick={() => {
+                          localStorage.setItem("raikos-active-tab", "landing");
+                          window.location.href = "/";
+                        }}
+                        className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition cursor-pointer"
+                      >
+                        Cari Kamar
+                      </button>
                     </div>
                   )}
+
+                  <div className="space-y-6">
+                    {activeRentals.map(booking => {
+                      const targetRoom = roomsLookup[booking.room_id];
+                      const entryDate = new Date(booking.entry_date);
+                      const endDate = new Date(entryDate.getFullYear(), entryDate.getMonth() + Number(booking.duration_months), entryDate.getDate());
+                      const todayDate = new Date();
+                      todayDate.setHours(0, 0, 0, 0);
+                      const endDateCopy = new Date(endDate);
+                      endDateCopy.setHours(0, 0, 0, 0);
+                      const diffTime = endDateCopy.getTime() - todayDate.getTime();
+                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                      const formattedEntryDate = entryDate.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+                      const formattedEndDate = endDate.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+
+                      return (
+                        <div key={booking.id} className="space-y-4">
+                          <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-850 space-y-4">
+                            <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                              <div className="text-left">
+                                <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-100 text-emerald-800 uppercase tracking-wider font-mono">
+                                  Status: Penghuni Aktif
+                                </span>
+                                <h4 className="font-bold text-sm text-slate-855 dark:text-slate-100 mt-2">
+                                  {targetRoom ? targetRoom.name : "Kamar No. " + booking.room_id}
+                                </h4>
+                              </div>
+                              {targetRoom?.images?.[0] && (
+                                <img
+                                  src={targetRoom.images[0]}
+                                  className="w-12 h-12 object-cover rounded-xl border border-slate-100 dark:border-slate-800 shrink-0"
+                                  alt="Room thumbnail"
+                                />
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-left text-xs leading-relaxed">
+                              <div>
+                                <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider font-mono">Tanggal Masuk</p>
+                                <p className="font-bold text-slate-805 dark:text-slate-200 mt-0.5">{formattedEntryDate}</p>
+                              </div>
+                              <div>
+                                <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider font-mono">Durasi Sewa</p>
+                                <p className="font-bold text-slate-805 dark:text-slate-200 mt-0.5">{booking.duration_months} Bulan</p>
+                              </div>
+                              <div>
+                                <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider font-mono">Tanggal Selesai</p>
+                                <p className="font-bold text-slate-805 dark:text-slate-200 mt-0.5">{formattedEndDate}</p>
+                              </div>
+                              <div>
+                                <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider font-mono">Sisa Hari Sewa</p>
+                                <p className={`font-bold mt-0.5 ${diffDays <= 7 ? "text-rose-500 font-extrabold animate-pulse" : "text-emerald-500"}`}>
+                                  {diffDays > 0 ? `${diffDays} Hari` : "Habis"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {diffDays <= 7 && (
+                            <div className="p-5 rounded-2xl bg-amber-50/50 dark:bg-amber-950/10 border border-amber-200/60 dark:border-amber-900/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-left">
+                              <div className="space-y-1">
+                                <h5 className="font-bold text-amber-850 dark:text-amber-400 text-xs flex items-center gap-1.5">
+                                  <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                                  Masa sewa anda akan segera selesai
+                                </h5>
+                                <p className="text-xs text-slate-500 dark:text-slate-405 leading-normal">
+                                  Masa sewa kamar Anda tersisa {diffDays} hari lagi. Tentukan apakah Anda ingin memperpanjang masa sewa atau tidak.
+                                </p>
+                              </div>
+
+                              {booking.will_not_extend ? (
+                                <span className="text-xs font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/20 px-3.5 py-2 rounded-xl shrink-0">
+                                  Opsi: Tidak Perpanjang
+                                </span>
+                              ) : (
+                                <div className="flex gap-2 shrink-0">
+                                  <button
+                                    onClick={() => openRenewModal(booking)}
+                                    className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-750 rounded-xl transition shadow-sm cursor-pointer"
+                                  >
+                                    Perpanjang Sewa
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      if (confirm("Apakah Anda yakin tidak ingin memperpanjang masa sewa kamar ini? Anda tetap memiliki hak tinggal sampai tanggal selesai.")) {
+                                        onSetWillNotExtend(booking.id, true);
+                                      }
+                                    }}
+                                    className="px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-750 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
+                                  >
+                                    Tidak Perpanjang
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Render Expired Rentals here as well */}
+                    {expiredRentals.map(booking => {
+                      const targetRoom = roomsLookup[booking.room_id];
+                      return (
+                        <div key={booking.id} className="text-center py-12 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col items-center justify-center gap-3">
+                          <Compass className="w-10 h-10 text-slate-350" />
+                          <div className="space-y-1">
+                            <p className="text-[10px] text-slate-400 uppercase font-mono tracking-wider font-bold">Status: Masa Sewa Berakhir</p>
+                            <h4 className="font-bold text-slate-700 dark:text-slate-300">Masa sewa kamar Anda telah berakhir</h4>
+                            <p className="text-slate-405 text-xs mt-0.5">Terima kasih telah menyewa kamar {targetRoom?.name || ""} di Raikos.</p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              localStorage.setItem("raikos-active-tab", "landing");
+                              window.location.href = "/";
+                            }}
+                            className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-770 rounded-xl shadow-sm transition cursor-pointer mt-2"
+                          >
+                            Sewa Kamar Baru
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -666,41 +925,123 @@ export default function PenyewaDashboard({
                     Sewa & Pembayaran Aktif
                   </h3>
 
-                  {activeUnPaidBookings.length === 0 ? (
-                    <p className="text-xs text-slate-450 text-left">Tidak ada tagihan atau booking aktif.</p>
+                  {activeUnPaidBookings.length === 0 && tenantExtensions.filter(e => e.status !== "approved").length === 0 ? (
+                    <p className="text-xs text-slate-400 text-left">Tidak ada tagihan atau booking aktif.</p>
                   ) : (
                     <div className="space-y-3">
+                      {/* Active Bookings (Standard) */}
                       {activeUnPaidBookings.map(b => {
-                        const alreadyPaid = tenantPayments.find(p => p.booking_id === b.id);
+                        const alreadyPaid = tenantPayments.find(p => p.booking_id === b.id && !p.extension_id);
+
+                        const isPendingBooking = b.status === "pending" || b.status === "Pending Approval";
+                        const isPaidApproved = alreadyPaid && alreadyPaid.status === "Paid";
+                        const isPaidPending = alreadyPaid && (alreadyPaid.status === "pending" || alreadyPaid.status === "Waiting Verification");
+                        const isPaidRejected = alreadyPaid && alreadyPaid.status === "Rejected";
+
                         return (
                           <div key={b.id} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-850 flex items-center justify-between">
                             <div className="text-left space-y-0.5">
-                              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Sewa: {roomsLookup[b.room_id]?.name || "Kamar"}</p>
-                              <p className="text-[10px] text-slate-400">Periode: {b.entry_date} ({b.duration_months} bln)</p>
-                              <p className="font-semibold text-xs text-slate-800 dark:text-slate-200">Jumlah tagihan: Rp {b.total_price.toLocaleString()}</p>
+                              <p className="text-xs font-bold text-slate-750 dark:text-slate-300">Sewa Baru: {roomsLookup[b.room_id]?.name || "Kamar"}</p>
+                              <p className="text-[10px] text-slate-405">Periode: {b.entry_date} ({b.duration_months} bln)</p>
+
+                              {isPendingBooking ? (
+                                null
+                              ) : isPaidApproved ? (
+                                <p className="font-semibold text-xs text-slate-800 dark:text-slate-205">Jumlah tagihan: Rp 0</p>
+                              ) : (
+                                <p className="font-semibold text-xs text-slate-800 dark:text-slate-205">Jumlah tagihan: Rp {b.total_price.toLocaleString()}</p>
+                              )}
+
+                              {isPaidPending && (
+                                <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold mt-1">
+                                  Bukti pembayaran Anda sedang diperiksa oleh admin
+                                </p>
+                              )}
                             </div>
 
-                            {(b.status === "pending" || b.status === "Pending Approval") ? (
-                              <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 dark:bg-amber-950/20 px-2.5 py-1 rounded-lg">
-                                Menunggu Persetujuan Booking Admin
-                              </span>
-                            ) : alreadyPaid ? (
-                              <span className={`text-[11px] font-bold px-2.5 py-1.5 rounded-lg border capitalize ${(alreadyPaid.status === "Paid")
-                                ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/30"
-                                : (alreadyPaid.status === "rejected" || alreadyPaid.status === "Rejected")
-                                  ? "bg-rose-50 text-rose-500 border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/30"
-                                  : "bg-amber-50 text-amber-500 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/30"
-                                }`}>
-                                Pembayaran {(alreadyPaid.status === "Paid") ? "Lunas" : (alreadyPaid.status === "rejected" || alreadyPaid.status === "Rejected") ? "Ditolak" : "Verifikasi Admin"}
-                              </span>
-                            ) : (
-                              <button
-                                onClick={() => selectBookingForPayment(b)}
-                                className="px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:opacity-90 rounded-lg shadow-sm"
-                              >
-                                Lakukan Pembayaran
-                              </button>
-                            )}
+                            <div className="flex flex-col items-end gap-1.5">
+                              {isPendingBooking ? (
+                                <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 dark:bg-amber-950/20 px-2.5 py-1 rounded-lg">
+                                  Menunggu Persetujuan Booking
+                                </span>
+                              ) : isPaidApproved ? (
+                                <span className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg border bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/30">
+                                  Pembayaran Lunas
+                                </span>
+                              ) : isPaidPending ? (
+                                <span className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg border bg-amber-50 text-amber-500 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/30">
+                                  Menunggu Verifikasi Pembayaran
+                                </span>
+                              ) : (
+                                <>
+                                  {isPaidRejected ? (
+                                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg border bg-rose-50 text-rose-500 border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/30">
+                                      Pembayaran Ditolak
+                                    </span>
+                                  ) : (
+                                    <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 dark:bg-amber-950/20 px-2.5 py-1 rounded-lg">
+                                      Menunggu Pembayaran
+                                    </span>
+                                  )}
+                                  <button
+                                    onClick={() => selectBookingForPayment(b)}
+                                    className="px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:opacity-90 rounded-lg shadow-sm cursor-pointer"
+                                  >
+                                    Lakukan Pembayaran
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Active Extensions */}
+                      {tenantExtensions.map(ext => {
+                        const targetRoom = roomsLookup[ext.room_id];
+                        const isPaidPending = ext.status === "waiting_verification";
+                        const isPaidRejected = ext.status === "rejected";
+                        const isPaidApproved = ext.status === "approved";
+                        if (isPaidApproved) return null;
+
+                        return (
+                          <div key={ext.id} className="p-4 rounded-xl bg-violet-50/20 dark:bg-slate-950 border border-violet-100/30 dark:border-slate-850 flex items-center justify-between">
+                            <div className="text-left space-y-0.5">
+                              <p className="text-xs font-bold text-slate-750 dark:text-slate-350">
+                                Perpanjangan: {targetRoom?.name || "Kamar"}
+                              </p>
+                              <p className="text-[10px] text-slate-405">Tambahan Durasi: +{ext.duration_months} Bulan</p>
+                              <p className="font-semibold text-xs text-slate-800 dark:text-slate-205">
+                                Jumlah tagihan: Rp {ext.amount.toLocaleString()}
+                              </p>
+                              {isPaidPending && (
+                                <p className="text-[10px] text-indigo-650 dark:text-indigo-400 font-semibold mt-1">
+                                  Bukti pembayaran perpanjangan sedang diverifikasi admin
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="flex flex-col items-end gap-1.5">
+                              {isPaidPending ? (
+                                <span className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg border bg-amber-50 text-amber-500 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/30">
+                                  Menunggu Verifikasi
+                                </span>
+                              ) : (
+                                <>
+                                  {isPaidRejected && (
+                                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg border bg-rose-50 text-rose-500 border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/30">
+                                      Pembayaran Ditolak
+                                    </span>
+                                  )}
+                                  <button
+                                    onClick={() => selectExtensionForPayment(ext)}
+                                    className="px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:opacity-90 rounded-lg shadow-sm cursor-pointer"
+                                  >
+                                    Lakukan Pembayaran
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
@@ -961,15 +1302,120 @@ export default function PenyewaDashboard({
                   <button
                     type="button"
                     onClick={() => setUploadPaymentOpen(false)}
-                    className="px-4 py-2 border rounded-xl text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-350"
+                    className="px-4 py-2 border rounded-xl text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-350 cursor-pointer"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:opacity-90 shadow"
+                    className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:opacity-90 shadow cursor-pointer"
                   >
                     {paymentType === "transfer" ? "Unggah Sekarang" : "Ajukan Janji Temu"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* RENEW RENTAL MODAL POPUP */}
+      <AnimatePresence>
+        {renewModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-md w-full border border-slate-100 dark:border-slate-800 text-left space-y-6 shadow-2xl"
+            >
+              <div className="flex justify-between items-center">
+                <h3 className="font-display font-semibold text-lg text-slate-900 dark:text-slate-100">
+                  Perpanjang Sewa Kamar
+                </h3>
+                <button
+                  onClick={() => setRenewModalOpen(false)}
+                  className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleRenewSubmit} className="space-y-4 text-xs sm:text-sm">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-405 mb-1">Nama Kamar</label>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{renewForm.roomName}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-405 mb-1">Masa Sewa Sekarang</label>
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-350">
+                      {tenantBookings.find(b => b.id === renewForm.bookingId)?.duration_months} Bulan
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-405 mb-1">Tanggal Selesai Sekarang</label>
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-350">{renewForm.currentEndDate}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Pilih Durasi Perpanjangan</label>
+                  <select
+                    className="w-full px-3 py-2.5 text-sm rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 focus:outline-none focus:border-indigo-500 text-slate-800 dark:text-slate-150 font-semibold"
+                    value={renewForm.durationMonths}
+                    onChange={(e) => setRenewForm({ ...renewForm, durationMonths: Number(e.target.value) })}
+                  >
+                    <option value={1}>1 Bulan</option>
+                    <option value={3}>3 Bulan</option>
+                    <option value={6}>6 Bulan</option>
+                    <option value={12}>12 Bulan</option>
+                  </select>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-indigo-50/50 dark:bg-slate-950 border border-indigo-100/50 dark:border-slate-850 text-left">
+                  <p className="text-[10px] text-slate-400 uppercase font-mono tracking-wider font-bold">Estimasi Tagihan Baru</p>
+                  <div className="flex justify-between items-center mt-1.5">
+                    <p className="text-xs text-slate-600 dark:text-slate-300">
+                      Harga sewa bulanan:
+                    </p>
+                    <p className="text-xs font-bold text-slate-750 dark:text-slate-205">
+                      Rp {(() => {
+                        const b = tenantBookings.find(bk => bk.id === renewForm.bookingId);
+                        return b ? (roomsLookup[b.room_id]?.price_monthly || 0).toLocaleString() : 0;
+                      })()}/bln
+                    </p>
+                  </div>
+                  <div className="flex justify-between items-center mt-1 pt-1.5 border-t border-slate-100 dark:border-slate-850">
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Total Pembayaran:</p>
+                    <p className="text-sm font-extrabold text-indigo-650 dark:text-sky-400">
+                      Rp {(() => {
+                        const b = tenantBookings.find(bk => bk.id === renewForm.bookingId);
+                        return b ? ((roomsLookup[b.room_id]?.price_monthly || 0) * renewForm.durationMonths).toLocaleString() : 0;
+                      })()}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-850 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRenewModalOpen(false)}
+                    className="px-4 py-2 border rounded-xl text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-350 cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:opacity-90 shadow cursor-pointer"
+                  >
+                    Ajukan Perpanjangan
                   </button>
                 </div>
               </form>

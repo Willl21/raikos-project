@@ -39,6 +39,22 @@ export class BookingService {
         throw new Error("Kamar tidak tersedia untuk dipesan");
       }
 
+      // Validate entry_date: must be at least H+3 (today + 3 days)
+      if (!bData.entry_date) {
+        throw new Error("Tanggal masuk wajib diisi");
+      }
+      const parts = bData.entry_date.split("-");
+      const entryDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      entryDate.setHours(0, 0, 0, 0);
+
+      const minDate = new Date();
+      minDate.setDate(minDate.getDate() + 3);
+      minDate.setHours(0, 0, 0, 0);
+
+      if (entryDate < minDate) {
+        throw new Error("Tanggal masuk minimal 3 hari setelah tanggal booking");
+      }
+
       const bookingId = generateId("bkg");
       const userId = bData.user_id || `usr-guest-${Date.now()}`;
       const durationMonths = Number(bData.duration_months) || 1;
@@ -122,13 +138,13 @@ export class BookingService {
       await conn.query("UPDATE bookings SET status = ? WHERE id = ?", [dbStatus, id]);
 
       // 4. Synchronize room status
-      let newRoomStatus = "Tersedia";
+      let newRoomStatus = "tersedia";
       if (dbStatus === "Approved") {
-        newRoomStatus = "BOOKED";
+        newRoomStatus = "dipesan";
       } else if (dbStatus === "Completed") {
-        newRoomStatus = "Terisi";
+        newRoomStatus = "terisi";
       } else if (dbStatus === "Rejected") {
-        newRoomStatus = "Tersedia";
+        newRoomStatus = "tersedia";
       }
 
       await conn.query("UPDATE rooms SET status = ? WHERE id = ?", [newRoomStatus, booking.room_id]);

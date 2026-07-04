@@ -14,13 +14,14 @@ import {
   BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, PieChart, Pie, AreaChart, Area
 } from "recharts";
-import { Room, User, Booking, Payment, Notification } from "../types";
+import { Room, User, Booking, Payment, Notification, RentalExtension } from "../types";
 
 interface AdminDashboardProps {
   rooms: Room[];
   tenants: User[];
   bookings: Booking[];
   payments: Payment[];
+  extensions: RentalExtension[];
   onAddRoom: (roomData: Partial<Room>) => void;
   onUpdateRoom: (id: string, roomData: Partial<Room>) => void;
   onDeleteRoom: (id: string) => void;
@@ -38,6 +39,7 @@ export default function AdminDashboard({
   tenants,
   bookings,
   payments,
+  extensions = [],
   onAddRoom,
   onUpdateRoom,
   onDeleteRoom,
@@ -115,7 +117,7 @@ export default function AdminDashboard({
   const occupiedRooms = rooms.filter(r => r.status === "Terisi" || r.status === "terisi").length;
   const bookedRooms = rooms.filter(r => r.status === "BOOKED" || r.status === "dipesan").length;
   const totalTenantsCount = tenants.length;
-  const totalPendapatan = payments.reduce((acc, p) => ( p.status === "Paid") ? acc + p.amount : acc, 0);
+  const totalPendapatan = payments.reduce((acc, p) => (p.status === "Paid") ? acc + p.amount : acc, 0);
 
   // Static Data mapping for Charts
   const occupancyChartData = [
@@ -732,70 +734,126 @@ CREATE TABLE IF NOT EXISTS rooms (
                       </tr>
                     </thead>
                     <tbody>
-                      {payments.map((p) => (
-                        <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50/50">
-                          <td className="py-3.5 px-4 font-mono font-bold leading-tight">
-                            {p.id}
-                            <p className="text-[9px] text-slate-400 font-normal mt-0.5">{new Date(p.created_at).toLocaleDateString()}</p>
-                          </td>
-                          <td className="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-150">
-                            {getTenantName(p.user_id)}
-                          </td>
-                          <td className="py-3.5 px-4 text-slate-550 font-semibold">{p.payment_method}</td>
-                          <td className="py-3.5 px-4">
-                            {p.proof_image ? (
-                              <button
-                                onClick={() => setPreviewImage(p.proof_image || null)}
-                                className="text-indigo-600 hover:underline flex items-center gap-0.5 font-semibold text-[11px] cursor-pointer bg-transparent border-none"
-                              >
-                                <EyeIcon className="w-3.5 h-3.5" />
-                                Lihat Bukti
-                              </button>
-                            ) : (p.meetup_date || p.meeting_date) ? (
-                              <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1 font-semibold text-[11px]">
-                                🤝 Janji: {p.meetup_date || p.meeting_date}
+                      {payments.map((p) => {
+                        const isExtension = !!p.extension_id;
+                        const ext = isExtension ? extensions.find(e => e.id === p.extension_id) : null;
+                        const booking = bookings.find(b => b.id === p.booking_id);
+                        const roomName = booking ? getRoomName(booking.room_id) : "Kamar";
+
+                        let extDetails = null;
+                        if (isExtension && ext && booking) {
+                          const entryDate = new Date(booking.entry_date);
+                          const prevDuration = p.status === "Paid" ? booking.duration_months - ext.duration_months : booking.duration_months;
+                          const newDuration = p.status === "Paid" ? booking.duration_months : booking.duration_months + ext.duration_months;
+
+                          const entryDateObj = new Date(booking.entry_date);
+                          const prevStart = new Date(entryDateObj);
+                          const prevEnd = new Date(entryDateObj.getFullYear(), entryDateObj.getMonth() + prevDuration, entryDateObj.getDate());
+                          
+                          const newStart = new Date(entryDateObj);
+                          const newEnd = new Date(entryDateObj.getFullYear(), entryDateObj.getMonth() + newDuration, entryDateObj.getDate());
+
+                          const formatDateShort = (d: Date) => {
+                            return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+                          };
+
+                          extDetails = {
+                            roomName,
+                            prevRange: `${formatDateShort(prevStart)} - ${formatDateShort(prevEnd)}`,
+                            newRange: `${formatDateShort(newStart)} - ${formatDateShort(newEnd)}`,
+                            addedMonths: ext.duration_months
+                          };
+                        }
+
+                        return (
+                          <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50/50">
+                            <td className="py-3.5 px-4 font-mono font-bold leading-tight">
+                              {p.id}
+                              <p className="text-[9px] text-slate-400 font-normal mt-0.5">{new Date(p.created_at).toLocaleDateString()}</p>
+                            </td>
+                            <td className="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-150 text-left">
+                              {getTenantName(p.user_id)}
+                              <p className="text-[10px] text-slate-400 font-normal mt-0.5">Unit: {roomName}</p>
+                            </td>
+                            <td className="py-3.5 px-4 text-slate-550 font-semibold">{p.payment_method}</td>
+                            <td className="py-3.5 px-4">
+                              {p.proof_image ? (
+                                <button
+                                  onClick={() => setPreviewImage(p.proof_image || null)}
+                                  className="text-indigo-650 hover:underline flex items-center gap-0.5 font-semibold text-[11px] cursor-pointer bg-transparent border-none animate-pulse"
+                                >
+                                  <EyeIcon className="w-3.5 h-3.5" />
+                                  Lihat Bukti
+                                </button>
+                              ) : (p.meetup_date || p.meeting_date) ? (
+                                <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1 font-semibold text-[11px]">
+                                  🤝 Janji: {p.meetup_date || p.meeting_date}
+                                </span>
+                              ) : (
+                                <span className="text-slate-300">Tidak Ada</span>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              {isExtension ? (
+                                <div className="space-y-1.5 text-left min-w-[200px]">
+                                  <span className="inline-block px-2 py-0.5 rounded bg-violet-100 text-violet-850 text-[9px] font-bold">
+                                    Perpanjangan Sewa
+                                  </span>
+                                  {extDetails && (
+                                    <div className="text-[10px] leading-relaxed text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 p-2 rounded-xl border border-slate-100 dark:border-slate-850 space-y-0.5">
+                                      <p className="font-semibold text-slate-600 dark:text-slate-300">Kamar: {extDetails.roomName}</p>
+                                      <p>Sebelumnya: {extDetails.prevRange}</p>
+                                      <p className="font-medium text-indigo-600 dark:text-sky-400">Tambahan: +{extDetails.addedMonths} bulan</p>
+                                      <p className="font-bold text-emerald-650 dark:text-emerald-450">Menjadi: {extDetails.newRange}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="space-y-1 text-left">
+                                  <span className="inline-block px-2 py-0.5 rounded bg-blue-100 text-blue-850 text-[9px] font-bold">
+                                    Sewa Baru
+                                  </span>
+                                  <p className="font-mono text-slate-500 text-[10px]">{p.billing_month} {p.billing_year}</p>
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4 font-extrabold text-indigo-650 dark:text-sky-400">
+                              Rp {p.amount.toLocaleString()}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span className={`px-2 py-0.5 rounded-[4px] text-[10px] font-bold ${(p.status === "Paid")
+                                ? "bg-emerald-100 text-emerald-850"
+                                : (p.status === "rejected" || p.status === "Rejected")
+                                  ? "bg-rose-100 text-rose-850"
+                                  : "bg-amber-100 text-amber-850"
+                                }`}>
+                                {p.status === "Paid" ? "Lunas" : p.status === "Waiting Verification" ? "Menunggu Verifikasi" : p.status === "Rejected" ? "Ditolak" : p.status}
                               </span>
-                            ) : (
-                              <span className="text-slate-300">Tidak Ada</span>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4 font-mono font-medium">{p.billing_month} {p.billing_year}</td>
-                          <td className="py-3.5 px-4 font-extrabold text-indigo-600 dark:text-sky-400">
-                            Rp {p.amount.toLocaleString()}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <span className={`px-2 py-0.5 rounded-[4px] text-[10px] font-bold ${( p.status === "Paid")
-                              ? "bg-emerald-100 text-emerald-850"
-                              : (p.status === "rejected" || p.status === "Rejected")
-                                ? "bg-rose-100 text-rose-850"
-                                : "bg-amber-100 text-amber-850"
-                              }`}>
-                              {p.status === "Paid" ? "Lunas" : p.status === "Waiting Verification" ? "Menunggu Verifikasi" : p.status === "Rejected" ? "Ditolak" : p.status}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-4 text-right">
-                            {(p.status === "pending" || p.status === "Waiting Verification") ? (
-                              <div className="flex gap-1.5 justify-end">
-                                <button
-                                  onClick={() => onUpdatePaymentStatus(p.id, "Paid")}
-                                  className="p-1 px-2.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold"
-                                  title="Approve Pembayaran"
-                                >
-                                  Approve
-                                </button>
-                                <button
-                                  onClick={() => onUpdatePaymentStatus(p.id, "Rejected")}
-                                  className="p-1 px-2 rounded bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold"
-                                >
-                                  Reject
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="text-[10px] text-slate-350 italic">Verified</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                            <td className="py-3.5 px-4 text-right">
+                              {(p.status === "pending" || p.status === "Waiting Verification") ? (
+                                <div className="flex gap-1.5 justify-end">
+                                  <button
+                                    onClick={() => onUpdatePaymentStatus(p.id, "Paid")}
+                                    className="p-1 px-2.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold cursor-pointer"
+                                    title={isExtension ? "Setujui Perpanjangan" : "Setujui Pembayaran"}
+                                  >
+                                    {isExtension ? "Setujui Perpanjangan" : "Approve"}
+                                  </button>
+                                  <button
+                                    onClick={() => onUpdatePaymentStatus(p.id, "Rejected")}
+                                    className="p-1 px-2 rounded bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold cursor-pointer"
+                                  >
+                                    Reject
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-[10px] text-slate-350 italic">Verified</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1105,13 +1163,11 @@ CREATE TABLE IF NOT EXISTS rooms (
                   <label className="block text-xs font-bold text-slate-500 mb-3">Fasilitas Checklist Unit</label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                     {[
-                      { id: "wifi", label: "Internet Wi-Fi" },
                       { id: "bathroom_inside", label: "KM Mandi Dalam" },
                       { id: "electricity_token", label: "Mandiri Token" },
                       { id: "water_independent", label: "Pompa Air Sendiri" },
                       { id: "lrt_nearby", label: "Dekat Stasiun LRT" },
-                      { id: "parking_area", label: "Lahan Parkir Luas" },
-                      { id: "security", label: "Kecamatan 24 Jam" }
+                      { id: "parking_area", label: "Lahan Parkir Luas" }
                     ].map((idx) => (
                       <label key={idx.id} className="flex items-center gap-1.5 cursor-pointer">
                         <input

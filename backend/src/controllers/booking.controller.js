@@ -20,6 +20,13 @@ export class BookingController {
       if (error.message === "Kamar tidak ditemukan") {
         return res.status(404).json({ success: false, message: error.message });
       }
+      if (
+        error.message === "Tanggal masuk minimal 3 hari setelah tanggal booking" ||
+        error.message === "Tanggal masuk wajib diisi" ||
+        error.message === "Kamar tidak tersedia untuk dipesan"
+      ) {
+        return res.status(400).json({ success: false, message: error.message });
+      }
       return res.status(500).json({ success: false, message: "Gagal melakukan pemesanan kamar." });
     }
   }

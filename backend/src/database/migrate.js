@@ -50,6 +50,7 @@ async function migrate() {
       // Clear existing records before migration to prevent duplicate key errors
       await connection.query("TRUNCATE TABLE room_images;");
       await connection.query("TRUNCATE TABLE payments;");
+      await connection.query("TRUNCATE TABLE rental_extensions;");
       await connection.query("TRUNCATE TABLE bookings;");
       await connection.query("TRUNCATE TABLE notifications;");
       await connection.query("TRUNCATE TABLE reports;");

@@ -1,5 +1,5 @@
 export type RoomStatus = "Tersedia" | "BOOKED" | "Terisi" | "tersedia" | "dipesan" | "terisi";
-export type BookingStatus = "Pending Approval" | "Approved" | "Rejected" | "Completed" | "pending" | "rejected";
+export type BookingStatus = "Pending Approval" | "Approved" | "Rejected" | "Completed" | "pending" | "rejected" | "Expired";
 export type PaymentStatus = "Waiting Verification" | "Paid" | "Rejected" | "pending" | "rejected";
 
 export interface User {
@@ -52,6 +52,18 @@ export interface Booking {
   duration_months: number;
   total_price: number;
   status: BookingStatus;
+  will_not_extend?: boolean;
+  created_at: string;
+}
+
+export interface RentalExtension {
+  id: string;
+  booking_id: string;
+  user_id: string;
+  room_id: string;
+  duration_months: number;
+  amount: number;
+  status: "pending_payment" | "waiting_verification" | "approved" | "rejected";
   created_at: string;
 }
 
@@ -59,6 +71,7 @@ export interface Payment {
   id: string;
   booking_id: string;
   user_id: string;
+  extension_id?: string | null;
   amount: number;
   payment_method: string;
   proof_image?: string;

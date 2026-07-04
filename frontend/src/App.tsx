@@ -5,7 +5,7 @@ import {
   HelpCircle, UserCheck, X, Moon, Sun, Database 
 } from "lucide-react";
 
-import { Room, User, Booking, Payment, Notification } from "./types";
+import { Room, User, Booking, Payment, Notification, RentalExtension } from "./types";
 import Navbar from "./components/Navbar";
 import LandingPage from "./components/LandingPage";
 import RoomDetail from "./components/RoomDetail";
@@ -20,6 +20,7 @@ export default function App() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [extensions, setExtensions] = useState<RentalExtension[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab ] = useState<string>(() => {
@@ -182,6 +183,13 @@ export default function App() {
       if (paymentsRes.ok) {
         const pmData = await paymentsRes.json();
         setPayments(pmData);
+      }
+
+      // Fetch extensions
+      const extensionsRes = await fetch("/api/rentals/extensions");
+      if (extensionsRes.ok) {
+        const extData = await extensionsRes.json();
+        setExtensions(extData);
       }
     } catch (err) {
       console.error("Express API connection fail, utilizing client-side fallback database.", err);
@@ -346,6 +354,9 @@ export default function App() {
       if (paymentData.proof_image instanceof File) {
         const formData = new FormData();
         formData.append("booking_id", paymentData.booking_id);
+        if (paymentData.extension_id) {
+          formData.append("extension_id", paymentData.extension_id);
+        }
         formData.append("amount", String(paymentData.amount));
         formData.append("payment_method", paymentData.payment_method);
         formData.append("proof_image", paymentData.proof_image);
@@ -363,6 +374,7 @@ export default function App() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ...paymentData,
+            extension_id: paymentData.extension_id || null,
             meeting_date: paymentData.meeting_date || paymentData.meetup_date,
             user_id: currentUser.id
           })
@@ -419,6 +431,50 @@ export default function App() {
       }
     } catch (err) {
       showToast("Gagal memperbarui profil di server.", "error");
+    }
+  };
+
+  // --- Rental Extensions & Expiry Lifecycles ---
+  const handleExtendRental = async (bookingId: string, durationMonths: number) => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch("/api/rentals/extend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          booking_id: bookingId,
+          duration_months: durationMonths,
+          user_id: currentUser.id
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast("Pengajuan perpanjangan sewa berhasil diajukan! Tagihan baru telah ditambahkan.", "success");
+        fetchAllData();
+      } else {
+        showToast(data.message || "Gagal mengajukan perpanjangan sewa.", "error");
+      }
+    } catch (err) {
+      showToast("Koneksi gagal saat mengajukan perpanjangan sewa.", "error");
+    }
+  };
+
+  const handleSetWillNotExtend = async (bookingId: string, willNotExtend: boolean) => {
+    try {
+      const res = await fetch(`/api/rentals/bookings/${bookingId}/will-not-extend`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ will_not_extend: willNotExtend })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(willNotExtend ? "Anda memilih untuk tidak memperpanjang sewa." : "Pilihan perpanjangan direset.", "info");
+        fetchAllData();
+      } else {
+        showToast(data.message || "Gagal mengubah opsi perpanjangan.", "error");
+      }
+    } catch (err) {
+      showToast("Koneksi gagal saat mengubah opsi perpanjangan.", "error");
     }
   };
 
@@ -623,6 +679,9 @@ export default function App() {
                 bookings={bookings}
                 payments={payments}
                 notifications={notifications}
+                extensions={extensions}
+                onExtendRental={handleExtendRental}
+                onSetWillNotExtend={handleSetWillNotExtend}
                 onUpdateProfile={handleUpdateProfile}
                 onSubmitPayment={handlePaymentSubmit}
                 onMarkNotificationRead={handleMarkNotificationRead}
@@ -648,6 +707,7 @@ export default function App() {
                 tenants={tenants}
                 bookings={bookings}
                 payments={payments}
+                extensions={extensions}
                 onAddRoom={handleAddRoom}
                 onUpdateRoom={handleUpdateRoom}
                 onDeleteRoom={handleDeleteRoom}

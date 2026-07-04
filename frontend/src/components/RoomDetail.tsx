@@ -59,6 +59,15 @@ export default function RoomDetail({
     }
   }, [currentUser]);
 
+  const getMinBookingDate = () => {
+    const minBookingDate = new Date();
+    minBookingDate.setDate(minBookingDate.getDate() + 3);
+    const year = minBookingDate.getFullYear();
+    const month = String(minBookingDate.getMonth() + 1).padStart(2, "0");
+    const day = String(minBookingDate.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const validateForm = () => {
     const tempErrors: Record<string, string> = {};
     if (!formData.name.trim()) tempErrors.name = "Nama lengkap harus diisi";
@@ -74,11 +83,16 @@ export default function RoomDetail({
     if (!formData.entryDate) {
       tempErrors.entryDate = "Tanggal masuk harus ditentukan";
     } else {
-      const selectedDate = new Date(formData.entryDate);
-      const today = new Date();
-      today.setHours(0,0,0,0);
-      if (selectedDate < today) {
-        tempErrors.entryDate = "Tanggal masuk tidak boleh masa lampau";
+      const parts = formData.entryDate.split("-");
+      const selectedDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      selectedDate.setHours(0, 0, 0, 0);
+
+      const minDate = new Date();
+      minDate.setDate(minDate.getDate() + 3);
+      minDate.setHours(0, 0, 0, 0);
+
+      if (selectedDate < minDate) {
+        tempErrors.entryDate = "Tanggal masuk minimal 3 hari setelah tanggal booking";
       }
     }
     setErrors(tempErrors);
@@ -218,16 +232,6 @@ export default function RoomDetail({
             </h3>
             <div className="grid grid-cols-2 gap-4 text-slate-600 dark:text-slate-350">
               <div className="flex items-center gap-2 text-sm">
-                <div className={`p-1.5 h-8 w-8 rounded-lg flex items-center justify-center ${room.wifi ? "bg-indigo-50 dark:bg-indigo-950/25 text-indigo-500" : "bg-slate-50 text-slate-300"}`}>
-                  <Wifi className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="font-medium text-xs text-slate-400">Akses Internet</p>
-                  <p className="font-semibold text-[13px]">{room.wifi ? "Wi-Fi Unlimited" : "Tidak Tersedia"}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 text-sm">
                 <div className={`p-1.5 h-8 w-8 rounded-lg flex items-center justify-center ${room.bathroom_inside ? "bg-sky-50 dark:bg-sky-950/25 text-sky-500" : "bg-slate-50 text-slate-300"}`}>
                   <Droplet className="w-4 h-4" />
                 </div>
@@ -267,15 +271,7 @@ export default function RoomDetail({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 text-sm">
-                <div className={`p-1.5 h-8 w-8 rounded-lg flex items-center justify-center ${room.security ? "bg-rose-50 dark:bg-rose-950/25 text-rose-500" : "bg-slate-50 text-slate-300"}`}>
-                  <Shield className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="font-medium text-xs text-slate-400">Keamanan Kos</p>
-                  <p className="font-semibold text-[13px]">{room.security ? "CCTV & Gerbang 24 Jam" : "Kunci Normal"}</p>
-                </div>
-              </div>
+
             </div>
           </div>
         </div>
@@ -483,6 +479,7 @@ export default function RoomDetail({
                           <input
                             type="date"
                             name="entryDate"
+                            min={getMinBookingDate()}
                             value={formData.entryDate}
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-indigo-500 text-slate-800 dark:text-slate-150"
