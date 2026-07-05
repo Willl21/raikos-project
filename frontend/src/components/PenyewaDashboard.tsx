@@ -326,7 +326,7 @@ export default function PenyewaDashboard({
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div className="text-left">
           <h1 className="font-display font-bold text-2xl sm:text-3xl text-slate-900 dark:text-slate-50">
-            Halo, {currentUser?.name || "Penyewa"} 👋
+            Halo, {currentUser?.name || "Penyewa"}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-450 mt-1">
             Selamat datang di portal informasi sewa & administrasi kos terintegrasi Raikos.
@@ -651,26 +651,49 @@ export default function PenyewaDashboard({
                                 <span className="text-xs font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/20 px-3.5 py-2 rounded-xl shrink-0">
                                   Opsi: Tidak Perpanjang
                                 </span>
-                              ) : (
-                                <div className="flex gap-2 shrink-0">
-                                  <button
-                                    onClick={() => openRenewModal(booking)}
-                                    className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-750 rounded-xl transition shadow-sm cursor-pointer"
-                                  >
-                                    Perpanjang Sewa
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      if (confirm("Apakah Anda yakin tidak ingin memperpanjang masa sewa kamar ini? Anda tetap memiliki hak tinggal sampai tanggal selesai.")) {
-                                        onSetWillNotExtend(booking.id, true);
-                                      }
-                                    }}
-                                    className="px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-750 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
-                                  >
-                                    Tidak Perpanjang
-                                  </button>
-                                </div>
-                              )}
+                              ) : (() => {
+                                // Find active extension for this booking
+                                const activeExt = extensions.find(e =>
+                                  e.booking_id === booking.id &&
+                                  ["pending", "approved", "waiting_verification"].includes(e.status)
+                                );
+                                if (activeExt) {
+                                  // Show status badge instead of button
+                                  const label =
+                                    activeExt.status === "pending" ? "Pengajuan Menunggu Persetujuan Admin ⏳" :
+                                      activeExt.status === "approved" ? "Disetujui — Silakan Bayar ✅" :
+                                        "Pembayaran Sedang Diverifikasi 🔍";
+                                  const colorClass =
+                                    activeExt.status === "pending" ? "text-amber-700 bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/30 dark:text-amber-400" :
+                                      activeExt.status === "approved" ? "text-emerald-700 bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800/30 dark:text-emerald-400" :
+                                        "text-indigo-700 bg-indigo-50 border-indigo-200 dark:bg-indigo-950/20 dark:border-indigo-800/30 dark:text-indigo-400";
+                                  return (
+                                    <span className={`text-xs font-bold px-3.5 py-2 rounded-xl shrink-0 border ${colorClass}`}>
+                                      {label}
+                                    </span>
+                                  );
+                                }
+                                return (
+                                  <div className="flex gap-2 shrink-0">
+                                    <button
+                                      onClick={() => openRenewModal(booking)}
+                                      className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-750 rounded-xl transition shadow-sm cursor-pointer"
+                                    >
+                                      Perpanjang Sewa
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (confirm("Apakah Anda yakin tidak ingin memperpanjang masa sewa kamar ini? Anda tetap memiliki hak tinggal sampai tanggal selesai.")) {
+                                          onSetWillNotExtend(booking.id, true);
+                                        }
+                                      }}
+                                      className="px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-750 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
+                                    >
+                                      Tidak Perpanjang
+                                    </button>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           )}
                         </div>
@@ -997,54 +1020,67 @@ export default function PenyewaDashboard({
                       })}
 
                       {/* Active Extensions */}
-                      {tenantExtensions.map(ext => {
-                        const targetRoom = roomsLookup[ext.room_id];
-                        const isPaidPending = ext.status === "waiting_verification";
-                        const isPaidRejected = ext.status === "rejected";
-                        const isPaidApproved = ext.status === "approved";
-                        if (isPaidApproved) return null;
+                      {tenantExtensions
+                        .filter(ext => ext.status !== 'completed')  // hide fully completed ones
+                        .map(ext => {
+                          const targetRoom = roomsLookup[ext.room_id];
+                          const isPending = ext.status === "pending";              // waiting Admin approval
+                          const isAdminApproved = ext.status === "approved";       // Admin approved, need to pay
+                          const isPaidPending = ext.status === "waiting_verification"; // payment uploaded, wait verify
+                          const isPaidRejected = ext.status === "rejected";        // Admin rejected the extension request
 
-                        return (
-                          <div key={ext.id} className="p-4 rounded-xl bg-violet-50/20 dark:bg-slate-950 border border-violet-100/30 dark:border-slate-850 flex items-center justify-between">
-                            <div className="text-left space-y-0.5">
-                              <p className="text-xs font-bold text-slate-750 dark:text-slate-350">
-                                Perpanjangan: {targetRoom?.name || "Kamar"}
-                              </p>
-                              <p className="text-[10px] text-slate-405">Tambahan Durasi: +{ext.duration_months} Bulan</p>
-                              <p className="font-semibold text-xs text-slate-800 dark:text-slate-205">
-                                Jumlah tagihan: Rp {ext.amount.toLocaleString()}
-                              </p>
-                              {isPaidPending && (
-                                <p className="text-[10px] text-indigo-650 dark:text-indigo-400 font-semibold mt-1">
-                                  Bukti pembayaran perpanjangan sedang diverifikasi admin
+                          return (
+                            <div key={ext.id} className="p-4 rounded-xl bg-violet-50/20 dark:bg-slate-950 border border-violet-100/30 dark:border-slate-850 flex items-center justify-between">
+                              <div className="text-left space-y-0.5">
+                                <p className="text-xs font-bold text-slate-750 dark:text-slate-350">
+                                  Perpanjangan: {targetRoom?.name || "Kamar"}
                                 </p>
-                              )}
-                            </div>
+                                <p className="text-[10px] text-slate-405">Tambahan Durasi: +{ext.duration_months} Bulan</p>
+                                <p className="font-semibold text-xs text-slate-800 dark:text-slate-205">
+                                  Jumlah tagihan: Rp {ext.amount.toLocaleString()}
+                                </p>
+                                {isPending && (
+                                  <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mt-1">
+                                    ⏳ Menunggu persetujuan Admin…
+                                  </p>
+                                )}
+                                {isAdminApproved && (
+                                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
+                                    ✅ Disetujui Admin — Silakan lakukan pembayaran!
+                                  </p>
+                                )}
+                                {isPaidPending && (
+                                  <p className="text-[10px] text-indigo-650 dark:text-indigo-400 font-semibold mt-1">
+                                    Bukti pembayaran perpanjangan sedang diverifikasi admin
+                                  </p>
+                                )}
+                              </div>
 
-                            <div className="flex flex-col items-end gap-1.5">
-                              {isPaidPending ? (
-                                <span className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg border bg-amber-50 text-amber-500 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/30">
-                                  Menunggu Verifikasi
-                                </span>
-                              ) : (
-                                <>
-                                  {isPaidRejected && (
-                                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg border bg-rose-50 text-rose-500 border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/30">
-                                      Pembayaran Ditolak
-                                    </span>
-                                  )}
+                              <div className="flex flex-col items-end gap-1.5">
+                                {isPending ? (
+                                  <span className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg border bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/30">
+                                    Menunggu Persetujuan Admin
+                                  </span>
+                                ) : isPaidPending ? (
+                                  <span className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg border bg-amber-50 text-amber-500 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/30">
+                                    Menunggu Verifikasi
+                                  </span>
+                                ) : isPaidRejected ? (
+                                  <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg border bg-rose-50 text-rose-500 border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/30">
+                                    Pengajuan Ditolak Admin
+                                  </span>
+                                ) : isAdminApproved ? (
                                   <button
                                     onClick={() => selectExtensionForPayment(ext)}
                                     className="px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:opacity-90 rounded-lg shadow-sm cursor-pointer"
                                   >
                                     Lakukan Pembayaran
                                   </button>
-                                </>
-                              )}
+                                ) : null}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
                     </div>
                   )}
                 </div>

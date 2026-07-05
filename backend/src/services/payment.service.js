@@ -76,8 +76,15 @@ export class PaymentService {
         ]
       );
 
-      // If it is an extension payment, update rental_extensions status
+      // If it is an extension payment, validate it is in 'approved' state and transition to 'waiting_verification'
       if (extensionId) {
+        const [extRows] = await conn.query("SELECT status FROM rental_extensions WHERE id = ?", [extensionId]);
+        if (extRows.length === 0) {
+          throw new Error("Data perpanjangan tidak ditemukan");
+        }
+        if (extRows[0].status !== "approved") {
+          throw new Error("Perpanjangan belum disetujui Admin. Tidak dapat melakukan pembayaran.");
+        }
         await conn.query(
           "UPDATE rental_extensions SET status = 'waiting_verification' WHERE id = ?",
           [extensionId]
@@ -168,8 +175,8 @@ export class PaymentService {
         const roomName = rooms.length > 0 ? rooms[0].name : "#";
 
         if (dbStatus === "Paid") {
-          // Approve extension status
-          await conn.query("UPDATE rental_extensions SET status = 'approved' WHERE id = ?", [extension.id]);
+          // Mark extension as completed
+          await conn.query("UPDATE rental_extensions SET status = 'completed' WHERE id = ?", [extension.id]);
           // Add duration to the original booking
           await conn.query(
             "UPDATE bookings SET duration_months = duration_months + ? WHERE id = ?",
@@ -178,8 +185,8 @@ export class PaymentService {
           // Keep room status as terisi
           await conn.query("UPDATE rooms SET status = 'terisi' WHERE id = ?", [extension.room_id]);
         } else {
-          // Reject extension status
-          await conn.query("UPDATE rental_extensions SET status = 'rejected' WHERE id = ?", [extension.id]);
+          // Reject: revert extension to approved so tenant can re-pay
+          await conn.query("UPDATE rental_extensions SET status = 'approved' WHERE id = ?", [extension.id]);
         }
 
         // Create notification for tenant

@@ -79,6 +79,7 @@ CREATE TABLE bookings (
   total_price DECIMAL(12,2) NOT NULL,
   status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'confirmed', 'rejected'
   will_not_extend BOOLEAN DEFAULT FALSE,
+  booking_type VARCHAR(20) DEFAULT 'new_rent',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
@@ -94,7 +95,8 @@ CREATE TABLE rental_extensions (
   room_id VARCHAR(50) NOT NULL,
   duration_months INT NOT NULL,
   amount DECIMAL(12,2) NOT NULL,
-  status VARCHAR(20) DEFAULT 'pending_payment', -- 'pending_payment', 'waiting_verification', 'approved', 'rejected'
+  status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'approved', 'waiting_payment', 'waiting_verification', 'completed', 'rejected'
+  booking_type VARCHAR(20) DEFAULT 'renewal',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,

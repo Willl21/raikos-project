@@ -36,7 +36,39 @@ export class RentalController {
       return res.status(200).json({ success: true, extension });
     } catch (error) {
       console.error("[RentalController.createExtension] Error:", error);
+      // Return 409 Conflict if there is already an active extension
+      if (error.message && error.message.includes("pengajuan perpanjangan aktif")) {
+        return res.status(409).json({ success: false, message: error.message });
+      }
       return res.status(500).json({ success: false, message: error.message || "Gagal melakukan perpanjangan sewa." });
+    }
+  }
+
+  /**
+   * Admin action: approve or reject a pending rental extension.
+   * PUT /api/rentals/extensions/:id
+   * Body: { status: "approved" | "rejected" }
+   */
+  static async updateExtensionStatus(req, res) {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!status) {
+        return res.status(400).json({ success: false, message: "Status wajib disertakan." });
+      }
+      if (!["approved", "rejected", "Approved", "Rejected"].includes(status)) {
+        return res.status(400).json({ success: false, message: "Status hanya boleh 'approved' atau 'rejected'." });
+      }
+
+      const extension = await RentalService.updateExtensionStatus(id, status);
+      return res.status(200).json({ success: true, extension });
+    } catch (error) {
+      console.error("[RentalController.updateExtensionStatus] Error:", error);
+      if (error.message === "Data perpanjangan tidak ditemukan") {
+        return res.status(404).json({ success: false, message: error.message });
+      }
+      return res.status(500).json({ success: false, message: error.message || "Gagal memperbarui status perpanjangan." });
     }
   }
 

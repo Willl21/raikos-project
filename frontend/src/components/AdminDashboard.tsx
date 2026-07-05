@@ -29,6 +29,7 @@ interface AdminDashboardProps {
   onUpdateTenant: (id: string, tenantData: Partial<User>) => void;
   onDeleteTenant: (id: string) => void;
   onUpdateBookingStatus: (id: string, status: string) => void;
+  onUpdateExtensionStatus: (id: string, status: string) => void;
   onUpdatePaymentStatus: (id: string, status: string) => void;
   onResetDB: () => void;
   onRefreshData?: () => void;
@@ -47,6 +48,7 @@ export default function AdminDashboard({
   onUpdateTenant,
   onDeleteTenant,
   onUpdateBookingStatus,
+  onUpdateExtensionStatus,
   onUpdatePaymentStatus,
   onResetDB,
   onRefreshData
@@ -296,8 +298,7 @@ CREATE TABLE IF NOT EXISTS rooms (
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div className="text-left">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-100 dark:bg-violet-950/40 text-violet-600 dark:text-sky-400 text-xs font-semibold uppercase tracking-wider font-mono border border-violet-200/50">
-            <SparklesIcon className="w-3.5 h-3.5" />
-            Sistem ERP Admin Premium
+            Sistem ERP Admin
           </div>
           <h1 className="font-display font-bold text-2xl sm:text-3xl text-slate-900 dark:text-slate-50 mt-2">
             Raikos Management Center (RMC)
@@ -608,98 +609,235 @@ CREATE TABLE IF NOT EXISTS rooms (
           )}
 
           {/* Subview: BOOKINGS MANUAL CONFIRMATION */}
-          {erpTab === "bookings" && (
-            <motion.div
-              key="bookings"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-6"
-            >
-              <div>
-                <h3 className="font-display font-semibold text-lg text-slate-900 dark:text-slate-100">
-                  Konfirmasi Pengajuan Booking Kamar
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Ulas verifikasi legalitas penyewa dan berikan persetujuan untuk meloloskan transaksi ke proses sewa aktif.
-                </p>
-              </div>
+          {erpTab === "bookings" && (() => {
+            // Pending new bookings
+            const pendingBookings = bookings.filter(b => b.status === "pending" || b.status === "Pending Approval");
+            // Pending extension requests
+            const pendingExtensions = extensions.filter(e => e.status === "pending");
+            const totalPending = pendingBookings.length + pendingExtensions.length;
 
-              {bookings.length === 0 ? (
-                <div className="py-8 text-center text-slate-450">Belum ada pemesanan terekam.</div>
-              ) : (
-                <div className="overflow-x-auto text-left">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-150 text-slate-400 font-bold uppercase">
-                        <th className="py-3 px-4 text-left">Sewa ID & Tanggal</th>
-                        <th className="py-3 px-4 text-left">Nama Penyewa & NIK</th>
-                        <th className="py-3 px-4 text-left">Kamar Unit</th>
-                        <th className="py-3 px-4 text-left">Durasi sewa</th>
-                        <th className="py-3 px-4 text-left">Total Biaya</th>
-                        <th className="py-3 px-4 text-left">Status</th>
-                        <th className="py-3 px-4 text-right">Aksi Kontrol</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bookings.map((b) => (
-                        <tr key={b.id} className="border-b border-slate-100 hover:bg-slate-50/50">
-                          <td className="py-3.5 px-4 font-mono">
-                            <p className="font-bold">{b.id}</p>
-                            <p className="text-[10px] text-slate-400">{new Date(b.created_at).toLocaleDateString()}</p>
-                          </td>
-                          <td className="py-3.5 px-4 text-left">
-                            <p className="font-bold text-slate-800 dark:text-slate-150">{b.name}</p>
-                            <p className="text-[10px] text-slate-400">NIK: {b.nik}</p>
-                          </td>
-                          <td className="py-3.5 px-4 text-slate-700 dark:text-slate-3 scaling-95 font-semibold">
-                            {getRoomName(b.room_id)}
-                          </td>
-                          <td className="py-3.5 px-4">{b.duration_months} bln (Mulai {b.entry_date})</td>
-                          <td className="py-3.5 px-4 font-bold text-slate-805 dark:text-slate-150">
-                            Rp {b.total_price.toLocaleString()}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <span className={`px-2 py-0.5 rounded-[4px] text-[10px] font-bold ${(b.status === "Approved" || b.status === "Completed")
-                              ? "bg-emerald-100 text-emerald-800"
-                              : (b.status === "rejected" || b.status === "Rejected")
-                                ? "bg-rose-100 text-rose-800"
-                                : "bg-amber-100 text-amber-800"
-                              }`}>
-                              {(b.status === "Approved") ? "Disetujui" : b.status === "Completed" ? "Selesai" : (b.status === "rejected" || b.status === "Rejected") ? "Ditolak" : "Menunggu Persetujuan"}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-4 text-right">
-                            {(b.status === "pending" || b.status === "Pending Approval") ? (
-                              <div className="flex gap-1.5 justify-end">
-                                <button
-                                  onClick={() => onUpdateBookingStatus(b.id, "Approved")}
-                                  className="p-1 px-2 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold"
-                                  title="Approve Booking"
-                                >
-                                  Approve
-                                </button>
-                                <button
-                                  onClick={() => onUpdateBookingStatus(b.id, "Rejected")}
-                                  className="p-1 px-2 rounded bg-rose-50 hover:bg-rose-100 text-rose-600"
-                                  title="Reject Booking"
-                                >
-                                  Reject
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="text-[10px] text-slate-350 italic">Tindakan Selesai</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            return (
+              <motion.div
+                key="bookings"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-6"
+              >
+                <div>
+                  <h3 className="font-display font-semibold text-lg text-slate-900 dark:text-slate-100">
+                    Konfirmasi Pengajuan Pemesanan
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Daftar pengajuan sewa baru dan perpanjangan sewa yang menunggu persetujuan Admin.
+                    {totalPending > 0 && (
+                      <span className="ml-1.5 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold text-[10px]">
+                        {totalPending} Menunggu
+                      </span>
+                    )}
+                  </p>
                 </div>
-              )}
-            </motion.div>
-          )}
+
+                {totalPending === 0 ? (
+                  <div className="py-10 text-center text-slate-400 text-sm">
+                    Tidak ada pengajuan yang perlu ditindaklanjuti saat ini.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+
+                    {/* ── SEWA BARU (Pending Bookings) ── */}
+                    {pendingBookings.map((b) => {
+                      const tenant = tenants.find(t => t.id === b.user_id);
+                      return (
+                        <div key={b.id} className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 overflow-hidden">
+                          {/* Header badge */}
+                          <div className="flex items-center gap-2 px-4 pt-3 pb-2 border-b border-slate-100 dark:border-slate-800/60">
+                            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400">
+                              Jenis Pengajuan: Sewa Baru
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400">{b.id}</span>
+                            <span className="ml-auto text-[10px] text-slate-400">{new Date(b.created_at).toLocaleDateString("id-ID")}</span>
+                          </div>
+
+                          {/* Body */}
+                          <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                            <div>
+                              <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Nama Penyewa</p>
+                              <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{b.name}</p>
+                              <p className="text-[10px] text-slate-400">{tenant?.email || b.email}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Kamar</p>
+                              <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{getRoomName(b.room_id)}</p>
+                              <p className="text-[10px] text-slate-400">NIK: {b.nik}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Durasi Sewa</p>
+                              <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{b.duration_months} Bulan</p>
+                              <p className="text-[10px] text-slate-400">Masuk: {b.entry_date}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Total Biaya</p>
+                              <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">Rp {b.total_price.toLocaleString("id-ID")}</p>
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="px-4 pb-4 flex gap-2 justify-end">
+                            <button
+                              onClick={() => onUpdateBookingStatus(b.id, "Approved")}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/40 dark:text-emerald-400 transition cursor-pointer"
+                            >
+                              <CheckIcon className="w-3.5 h-3.5" /> Setujui
+                            </button>
+                            <button
+                              onClick={() => onUpdateBookingStatus(b.id, "Rejected")}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-900/20 dark:border-rose-800/40 dark:text-rose-400 transition cursor-pointer"
+                            >
+                              <XIcon className="w-3.5 h-3.5" /> Tolak
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* ── PERPANJANGAN SEWA (Pending Extensions) ── */}
+                    {pendingExtensions.map((ext) => {
+                      const booking = bookings.find(b => b.id === ext.booking_id);
+                      const tenant = tenants.find(t => t.id === ext.user_id);
+                      const roomName = getRoomName(ext.room_id);
+
+                      // Calculate current period and new period after extension
+                      let currentStartStr = "–";
+                      let currentEndStr = "–";
+                      let newEndStr = "–";
+
+                      if (booking) {
+                        const entryDate = new Date(booking.entry_date);
+                        const currentEnd = new Date(entryDate.getFullYear(), entryDate.getMonth() + Number(booking.duration_months), entryDate.getDate());
+                        const newEnd = new Date(entryDate.getFullYear(), entryDate.getMonth() + Number(booking.duration_months) + Number(ext.duration_months), entryDate.getDate());
+                        const fmt = (d: Date) => d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+                        currentStartStr = fmt(entryDate);
+                        currentEndStr = fmt(currentEnd);
+                        newEndStr = fmt(newEnd);
+                      }
+
+                      return (
+                        <div key={ext.id} className="rounded-2xl border border-violet-100 dark:border-violet-900/30 bg-violet-50/30 dark:bg-violet-950/10 overflow-hidden">
+                          {/* Header badge */}
+                          <div className="flex items-center gap-2 px-4 pt-3 pb-2 border-b border-violet-100 dark:border-violet-900/20">
+                            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
+                              Jenis Pengajuan: Perpanjangan Sewa
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400">{ext.id}</span>
+                            <span className="ml-auto text-[10px] text-slate-400">{new Date(ext.created_at).toLocaleDateString("id-ID")}</span>
+                          </div>
+
+                          {/* Body */}
+                          <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
+                            <div>
+                              <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Nama Penyewa</p>
+                              <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{tenant?.name || ext.user_id}</p>
+                              <p className="text-[10px] text-slate-400">{tenant?.email || ""}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Kamar</p>
+                              <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{roomName}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Mengajukan Tambahan</p>
+                              <p className="font-bold text-violet-700 dark:text-violet-400 text-sm mt-0.5">+{ext.duration_months} Bulan</p>
+                              <p className="text-[10px] text-slate-400">Tagihan: Rp {ext.amount.toLocaleString("id-ID")}</p>
+                            </div>
+                          </div>
+
+                          {/* Period info */}
+                          <div className="mx-4 mb-3 p-3 rounded-xl bg-white/60 dark:bg-slate-900/40 border border-violet-100 dark:border-violet-900/20 grid grid-cols-2 gap-3 text-xs">
+                            <div>
+                              <p className="text-[10px] text-slate-400 font-mono uppercase font-bold tracking-wide mb-1">Masa Sewa Sekarang</p>
+                              <p className="font-semibold text-slate-700 dark:text-slate-300">{currentStartStr} – {currentEndStr}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-slate-400 font-mono uppercase font-bold tracking-wide mb-1">Jika Disetujui, Menjadi</p>
+                              <p className="font-semibold text-emerald-700 dark:text-emerald-400">{currentStartStr} – {newEndStr}</p>
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="px-4 pb-4 flex gap-2 justify-end">
+                            <button
+                              onClick={() => onUpdateExtensionStatus(ext.id, "approved")}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200 dark:bg-violet-900/20 dark:border-violet-800/40 dark:text-violet-400 transition cursor-pointer"
+                            >
+                              <CheckIcon className="w-3.5 h-3.5" /> Setujui Perpanjangan
+                            </button>
+                            <button
+                              onClick={() => onUpdateExtensionStatus(ext.id, "rejected")}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-900/20 dark:border-rose-800/40 dark:text-rose-400 transition cursor-pointer"
+                            >
+                              <XIcon className="w-3.5 h-3.5" /> Tolak
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                  </div>
+                )}
+
+                {/* Historical (non-pending) bookings list */}
+                {bookings.filter(b => b.status !== "pending" && b.status !== "Pending Approval").length > 0 && (
+                  <details className="group">
+                    <summary className="cursor-pointer text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-semibold select-none">
+                      ▸ Lihat semua riwayat booking ({bookings.filter(b => b.status !== "pending" && b.status !== "Pending Approval").length} data)
+                    </summary>
+                    <div className="mt-3 overflow-x-auto text-left">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-150 text-slate-400 font-bold uppercase">
+                            <th className="py-3 px-4 text-left">ID & Tanggal</th>
+                            <th className="py-3 px-4 text-left">Nama Penyewa</th>
+                            <th className="py-3 px-4 text-left">Kamar</th>
+                            <th className="py-3 px-4 text-left">Durasi</th>
+                            <th className="py-3 px-4 text-left">Total</th>
+                            <th className="py-3 px-4 text-left">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bookings.filter(b => b.status !== "pending" && b.status !== "Pending Approval").map((b) => (
+                            <tr key={b.id} className="border-b border-slate-100 hover:bg-slate-50/50">
+                              <td className="py-3 px-4 font-mono">
+                                <p className="font-bold">{b.id}</p>
+                                <p className="text-[10px] text-slate-400">{new Date(b.created_at).toLocaleDateString("id-ID")}</p>
+                              </td>
+                              <td className="py-3 px-4">
+                                <p className="font-bold text-slate-800 dark:text-slate-150">{b.name}</p>
+                                <p className="text-[10px] text-slate-400">NIK: {b.nik}</p>
+                              </td>
+                              <td className="py-3 px-4 font-semibold text-slate-700 dark:text-slate-300">{getRoomName(b.room_id)}</td>
+                              <td className="py-3 px-4">{b.duration_months} bln</td>
+                              <td className="py-3 px-4 font-bold">Rp {b.total_price.toLocaleString("id-ID")}</td>
+                              <td className="py-3 px-4">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${(b.status === "Approved" || b.status === "Completed") ? "bg-emerald-100 text-emerald-800" :
+                                  (b.status === "rejected" || b.status === "Rejected") ? "bg-rose-100 text-rose-800" :
+                                    b.status === "Expired" ? "bg-slate-100 text-slate-500" :
+                                      "bg-amber-100 text-amber-800"
+                                  }`}>
+                                  {b.status === "Approved" ? "Disetujui" : b.status === "Completed" ? "Selesai" : b.status === "Expired" ? "Expired" : (b.status === "rejected" || b.status === "Rejected") ? "Ditolak" : b.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+                )}
+              </motion.div>
+            );
+          })()}
 
           {/* Subview: AUDIT PAYMENTS LEDGER */}
+
           {erpTab === "payments" && (
             <motion.div
               key="payments"
@@ -749,7 +887,7 @@ CREATE TABLE IF NOT EXISTS rooms (
                           const entryDateObj = new Date(booking.entry_date);
                           const prevStart = new Date(entryDateObj);
                           const prevEnd = new Date(entryDateObj.getFullYear(), entryDateObj.getMonth() + prevDuration, entryDateObj.getDate());
-                          
+
                           const newStart = new Date(entryDateObj);
                           const newEnd = new Date(entryDateObj.getFullYear(), entryDateObj.getMonth() + newDuration, entryDateObj.getDate());
 

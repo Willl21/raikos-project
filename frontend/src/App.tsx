@@ -592,6 +592,26 @@ export default function App() {
     } catch (err) {}
   };
 
+  const handleUpdateExtensionStatus = async (id: string, status: string) => {
+    try {
+      const res = await fetch(`/api/rentals/extensions/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const label = status === "approved" ? "Disetujui" : "Ditolak";
+        showToast(`Pengajuan perpanjangan sewa berhasil ${label}.`, "success");
+        fetchAllData();
+      } else {
+        showToast(data.message || "Gagal memperbarui status perpanjangan.", "error");
+      }
+    } catch (err) {
+      showToast("Koneksi gagal saat memperbarui status perpanjangan.", "error");
+    }
+  };
+
   const handleResetDB = async () => {
     if (!confirm("Perhatian! Tindakan ini akan mengosongkan seluruh relasi tabel kustom Anda dan memulihkan Seed Data asli Raikos. Lanjutkan?")) return;
     try {
@@ -715,6 +735,7 @@ export default function App() {
                 onUpdateTenant={handleUpdateTenant}
                 onDeleteTenant={handleDeleteTenant}
                 onUpdateBookingStatus={handleUpdateBookingStatus}
+                onUpdateExtensionStatus={handleUpdateExtensionStatus}
                 onUpdatePaymentStatus={handleUpdatePaymentStatus}
                 onResetDB={handleResetDB}
                 onRefreshData={fetchAllData}
