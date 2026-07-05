@@ -1477,9 +1477,21 @@ CREATE TABLE IF NOT EXISTS rooms (
               </div>
               <div className="p-2 border border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-950 flex justify-center items-center overflow-auto max-h-[70vh]">
                 <img
-                  src={previewImage}
+                  src={previewImage ?? ""}
                   alt="Bukti Transfer Pembayaran"
                   className="max-h-[60vh] object-contain rounded-lg"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    target.style.display = "none";
+                    const parent = target.parentElement;
+                    if (parent && !parent.querySelector(".img-error-msg")) {
+                      const msg = document.createElement("div");
+                      msg.className = "img-error-msg";
+                      msg.style.cssText = "color:#ef4444;font-size:13px;font-weight:600;text-align:center;padding:24px;";
+                      msg.textContent = "Bukti pembayaran tidak dapat dimuat.";
+                      parent.appendChild(msg);
+                    }
+                  }}
                 />
               </div>
               <div className="flex justify-end">
