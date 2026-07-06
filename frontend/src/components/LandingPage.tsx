@@ -217,10 +217,10 @@ export default function LandingPage({ rooms, onSelectRoom, isLoading }: LandingP
                       {/* Status Badges */}
                       <div className="absolute top-4 left-4 flex flex-col gap-1.5">
                         <span className={`px-2.5 py-1 text-[11px] font-bold rounded-lg text-white uppercase tracking-wider shadow ${(room.status === "Tersedia" || room.status === "tersedia")
-                            ? "bg-gradient-to-r from-emerald-500 to-green-600 shadow-emerald-500/10"
-                            : (room.status === "BOOKED" || room.status === "dipesan")
-                              ? "bg-gradient-to-r from-amber-500 to-orange-600 shadow-amber-500/10"
-                              : "bg-gradient-to-r from-slate-500 to-slate-700 shadow-slate-500/10"
+                          ? "bg-gradient-to-r from-emerald-500 to-green-600 shadow-emerald-500/10"
+                          : (room.status === "BOOKED" || room.status === "dipesan")
+                            ? "bg-gradient-to-r from-amber-500 to-orange-600 shadow-amber-500/10"
+                            : "bg-gradient-to-r from-slate-500 to-slate-700 shadow-slate-500/10"
                           }`}>
                           {(room.status === "Tersedia" || room.status === "tersedia") ? "Tersedia" : (room.status === "BOOKED" || room.status === "dipesan") ? "Dipesan" : "Terisi"}
                         </span>
@@ -412,8 +412,8 @@ export default function LandingPage({ rooms, onSelectRoom, isLoading }: LandingP
               key={t.id}
               onClick={() => setActiveTestimonial(idx)}
               className={`w-2.5 h-2.5 rounded-full transition-all ${activeTestimonial === idx
-                  ? "bg-indigo-600 dark:bg-sky-400 w-6"
-                  : "bg-slate-200 dark:bg-slate-800"
+                ? "bg-indigo-600 dark:bg-sky-400 w-6"
+                : "bg-slate-200 dark:bg-slate-800"
                 }`}
             />
           ))}
@@ -492,14 +492,18 @@ export default function LandingPage({ rooms, onSelectRoom, isLoading }: LandingP
               Sosial Media
             </h4>
             <div className="flex gap-3">
-              {["Instagram", "Tiktok", "Linkedin"].map((s) => (
+              {[
+                { name: "Instagram", url: "https://www.instagram.com/raikos0110/" },
+                { name: "Facebook", url: "https://www.facebook.com/rainhard.costa.9" },
+              ].map((s) => (
                 <a
-                  key={s}
-                  href="#"
-                  onClick={(e) => e.preventDefault()}
+                  key={s.name}
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="px-2.5 py-1.5 rounded bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:text-white hover:border-slate-700 transition"
                 >
-                  {s}
+                  {s.name}
                 </a>
               ))}
             </div>
