@@ -908,12 +908,7 @@ export default function App() {
                   </>
                 )}
 
-                {authMode === "login" && (
-                  <div className="pt-3 border-t text-center space-y-1 text-[10px] text-slate-400 font-mono leading-none">
-                    <p>Demo Penyewa: <span className="font-bold text-indigo-500">penyewa@raikos.com</span> pass: <span className="font-bold text-indigo-500">penyewa</span></p>
-                    <p>Demo Admin: <span className="font-bold text-violet-500">admin@raikos.com</span> pass: <span className="font-bold text-violet-500">admin</span></p>
-                  </div>
-                )}
+
               </form>
             </motion.div>
           </motion.div>
