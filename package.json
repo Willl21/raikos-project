@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node backend/src/server.js",
-    "build": "vite build frontend",
+    "build": "node node_modules/vite/bin/vite.js build frontend",
     "start": "NODE_ENV=production node backend/src/server.js",
     "postinstall": "npm run build",
     "clean": "rm -rf dist frontend/dist db.json",
