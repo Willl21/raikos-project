@@ -1,0 +1,27 @@
+Folder PATH listing for volume Data
+Volume serial number is 000000CC 461F:3B34
+D:.
++---.vscode
++---backend
+|   +---public
+|   |   \---kosan1
+|   \---src
+|       +---config
+|       +---controllers
+|       +---data
+|       +---database
+|       +---middleware
+|       +---models
+|       +---routes
+|       +---services
+|       \---utils
++---frontend
+|   +---dist
+|   |   \---assets
+|   +---public
+|   \---src
+|       +---assets
+|       |   \---images
+|       \---components
+\---uploads
+    \---payment

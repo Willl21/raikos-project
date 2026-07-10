@@ -6,9 +6,13 @@
   "scripts": {
     "dev": "node backend/src/server.js",
     "build": "vite build frontend",
-    "start": "node backend/src/server.js",
+    "start": "NODE_ENV=production node backend/src/server.js",
+    "postinstall": "npm run build",
     "clean": "rm -rf dist frontend/dist db.json",
     "lint": "tsc --noEmit --project frontend/tsconfig.json"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
