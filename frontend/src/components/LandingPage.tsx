@@ -376,7 +376,7 @@ export default function LandingPage({ rooms, onSelectRoom, isLoading }: LandingP
             <address className="not-italic text-xs space-y-2">
               <p>📍 Jalan Kemang Raya Gg. H. Basir ll No.160, RT.006/RW.002, Jatibening Baru, Kec. Pd. Gede, Kota Bks, Jawa Barat 17416</p>
               <p>📞 Whatsapp: 085217312670</p>
-              <p>✉️ Email: support@raikos.com</p>
+              <p>✉️ Email: rainhard.costa@gmail.com</p>
             </address>
           </div>
 
