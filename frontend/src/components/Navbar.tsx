@@ -54,8 +54,7 @@ export default function Navbar({
 
   const navItems = [
     { id: "daftar-kamar", label: "Cari Kamar" },
-    { id: "fasilitas", label: "Fasilitas" },
-    { id: "testimoni", label: "Testimoni" },
+    { id: "fasilitas", label: "Fasilitas" }
   ];
 
   return (

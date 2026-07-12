@@ -160,7 +160,7 @@ export default function LandingPage({ rooms, onSelectRoom, isLoading }: LandingP
               Pilihan Kamar Unggulan
             </h2>
             <p className="text-slate-500 text-sm mt-1">
-              Desain modern berstandar hunian elite, klik DETAIL untuk melihat spesifikasi dan sewa.
+              Tempat tinggal nyaman di Bekasi, klik DETAIL untuk melihat spesifikasi dan sewa.
             </p>
           </div>
         </div>
@@ -335,91 +335,6 @@ export default function LandingPage({ rooms, onSelectRoom, isLoading }: LandingP
         </div>
       </section>
 
-      {/* TESTIMONIALS SLIDER SECTION */}
-      <section id="testimoni" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-xl mx-auto mb-12">
-          <h2 className="font-display font-semibold text-2xl sm:text-3xl text-slate-900 dark:text-slate-100">
-            Dengar Apa Kata Mereka
-          </h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-            Ulasan jujur dari penghuni aktif yang merasakan kenyamanan hidup sesungguhnya bersama Raikos.
-          </p>
-        </div>
-
-        {/* Carousel slide body */}
-        <div className="relative max-w-3xl mx-auto">
-          {/* Controls left */}
-          <button
-            onClick={handleTestimonialPrev}
-            className="absolute left-0 lg:-left-16 top-1/2 -translate-y-1/2 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-md text-slate-500 hover:text-slate-800 dark:hover:text-slate-100 z-10 transition-all cursor-pointer"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-
-          <div className="overflow-hidden bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/85 p-8 sm:p-12 rounded-3xl shadow-lg relative min-h-[220px] flex items-center">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTestimonial}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.4 }}
-                className="grid grid-cols-1 sm:grid-cols-4 gap-6 items-center text-left w-full"
-              >
-                <div className="sm:col-span-1 flex justify-center sm:justify-start">
-                  <img
-                    src={TESTIMONIALS[activeTestimonial].avatar}
-                    alt={TESTIMONIALS[activeTestimonial].name}
-                    className="w-20 h-20 rounded-full object-cover shadow-sm border-2 border-indigo-500 ring-4 ring-indigo-50 dark:ring-indigo-950/20"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-                <div className="sm:col-span-3 space-y-3">
-                  <div className="flex gap-0.5 text-amber-500">
-                    {[...Array(TESTIMONIALS[activeTestimonial].rating)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-current" />
-                    ))}
-                  </div>
-                  <p className="text-sm italic text-slate-600 dark:text-slate-350 leading-relaxed font-medium">
-                    "{TESTIMONIALS[activeTestimonial].comment}"
-                  </p>
-                  <div>
-                    <h5 className="font-semibold text-slate-900 dark:text-slate-100">
-                      {TESTIMONIALS[activeTestimonial].name}
-                    </h5>
-                    <p className="text-xs text-slate-400 font-mono">
-                      {TESTIMONIALS[activeTestimonial].role}
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            </AnimatePresence>
-          </div>
-
-          {/* Controls right */}
-          <button
-            onClick={handleTestimonialNext}
-            className="absolute right-0 lg:-right-16 top-1/2 -translate-y-1/2 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-md text-slate-500 hover:text-slate-800 dark:hover:text-slate-100 z-10 transition-all cursor-pointer"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Dots indices indicator */}
-        <div className="flex justify-center gap-1.5 mt-6">
-          {TESTIMONIALS.map((t, idx) => (
-            <button
-              key={t.id}
-              onClick={() => setActiveTestimonial(idx)}
-              className={`w-2.5 h-2.5 rounded-full transition-all ${activeTestimonial === idx
-                ? "bg-indigo-600 dark:bg-sky-400 w-6"
-                : "bg-slate-200 dark:bg-slate-800"
-                }`}
-            />
-          ))}
-        </div>
-      </section>
-
       {/* FOOTER */}
       <footer className="bg-slate-950 text-slate-400 border-t border-slate-800/60 pt-16 pb-8 text-left">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-10">
@@ -451,28 +366,6 @@ export default function LandingPage({ rooms, onSelectRoom, isLoading }: LandingP
                   Pencarian Unit Kamar
                 </button>
               </li>
-              <li>
-                <button
-                  onClick={() => {
-                    const el = document.getElementById("fasilitas");
-                    el?.scrollIntoView({ behavior: "smooth" });
-                  }}
-                  className="hover:text-indigo-400 transition-colors"
-                >
-                  Fasilitas Gedung
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    const el = document.getElementById("testimoni");
-                    el?.scrollIntoView({ behavior: "smooth" });
-                  }}
-                  className="hover:text-indigo-400 transition-colors"
-                >
-                  Ulasan Penyewa
-                </button>
-              </li>
             </ul>
           </div>
 
@@ -481,8 +374,8 @@ export default function LandingPage({ rooms, onSelectRoom, isLoading }: LandingP
               Kontak Kami
             </h4>
             <address className="not-italic text-xs space-y-2">
-              <p>📍 Jl. Terusan Kincir No.8, Jatibening, Pondok Gede, Kota Bekasi, Jawa Barat</p>
-              <p>📞 Whatsapp: 0812-3456-7890</p>
+              <p>📍 Jalan Kemang Raya Gg. H. Basir ll No.160, RT.006/RW.002, Jatibening Baru, Kec. Pd. Gede, Kota Bks, Jawa Barat 17416</p>
+              <p>📞 Whatsapp: 085217312670</p>
               <p>✉️ Email: support@raikos.com</p>
             </address>
           </div>
@@ -507,9 +400,6 @@ export default function LandingPage({ rooms, onSelectRoom, isLoading }: LandingP
                 </a>
               ))}
             </div>
-            <p className="text-[10px] text-slate-600 mt-6 leading-relaxed">
-              Tipe Relasi Database: MySQL 8.0 Indexed Core Engine with Innodb Storage.
-            </p>
           </div>
         </div>
       </footer>
