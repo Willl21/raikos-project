@@ -8,7 +8,8 @@ import {
   Database as DatabaseIcon, Link as LinkIcon, ArrowRight as ArrowRightIcon,
   Sparkles as SparklesIcon, RefreshCw as RefreshCwIcon, Eye as EyeIcon,
   Clock as ClockIcon, DollarSign as DollarSignIcon, CheckCircle2, AlertTriangle,
-  Upload
+  Upload, Loader2 as Loader2Icon, ClipboardList as ClipboardListIcon,
+  AlertCircle as AlertCircleIcon
 } from "lucide-react";
 import {
   BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -281,15 +282,67 @@ CREATE TABLE IF NOT EXISTS rooms (
     setTimeout(() => setCopiedSql(false), 2000);
   };
 
-  // Mock reporting generator trigger (generates scannable download logs or prints)
+  // ── Report stats state (fetched from API) ──
+  interface ReportStats {
+    penyewa: { aktif: number; selesai: number; baruBulanIni: number };
+    kamar: { total: number; tersedia: number; terisi: number; maintenance: number };
+    pembayaran: { berhasil: number; pending: number; totalPendapatan: number };
+    pemesanan: { total: number; selesai: number; dibatalkan: number; menunggu: number };
+  }
+  const [reportStats, setReportStats] = useState<ReportStats | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
   const [downloadingReport, setDownloadingReport] = useState<string | null>(null);
 
-  const generateReportInfo = (type: string) => {
+  // Fetch report stats when reports tab is activated
+  useEffect(() => {
+    if (erpTab !== "reports") return;
+    const fetchStats = async () => {
+      setReportLoading(true);
+      setReportError(null);
+      try {
+        const res = await fetch("/api/reports/stats");
+        if (!res.ok) throw new Error("Gagal memuat statistik laporan.");
+        const data = await res.json();
+        setReportStats(data);
+      } catch (err: any) {
+        setReportError(err.message || "Gagal memuat statistik laporan.");
+      } finally {
+        setReportLoading(false);
+      }
+    };
+    fetchStats();
+  }, [erpTab]);
+
+  // Download CSV from backend
+  const handleDownloadCSV = async (type: string) => {
     setDownloadingReport(type);
-    setTimeout(() => {
+    try {
+      const res = await fetch(`/api/reports/download/${type}`);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || "Gagal mengunduh laporan.");
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const fileNames: Record<string, string> = {
+        penyewa: "laporan-penyewa.csv",
+        kamar: "laporan-kamar.csv",
+        pembayaran: "laporan-pembayaran.csv",
+        pemesanan: "laporan-pemesanan.csv"
+      };
+      a.href = url;
+      a.download = fileNames[type] || `laporan-${type}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err.message || "Gagal mengunduh file CSV. Silakan coba lagi.");
+    } finally {
       setDownloadingReport(null);
-      alert(`Sukses mengunduh spreadsheet otomatis: Raikos_Laporan_${type}_(${new Date().toLocaleDateString()}).csv`);
-    }, 1200);
+    }
   };
 
   return (
@@ -999,7 +1052,7 @@ CREATE TABLE IF NOT EXISTS rooms (
             </motion.div>
           )}
 
-          {/* Subview: EXPORTS & REPORTS GENERATION */}
+          {/* Subview: EXPORTS & REPORTS */}
           {erpTab === "reports" && (
             <motion.div
               key="reports"
@@ -1009,79 +1062,175 @@ CREATE TABLE IF NOT EXISTS rooms (
             >
               <div className="text-left pb-2 border-b border-slate-100">
                 <h3 className="font-display font-semibold text-lg text-slate-900 dark:text-slate-100">
-                  Audit Pelaporan Administrasi Kos
+                  Laporan
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Ekspor otomatis basis data sewa kos ke dalam file CSV spreadsheet, siap diimpor ke file Excel ataupun dicetak sebagai PDF. Pencatatan terenkripsi penuh.
+                  Ringkasan data operasional kos secara realtime. Ekspor ke file CSV untuk dibuka di Microsoft Excel.
                 </p>
               </div>
 
-              {/* Reports Grid catalog cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-left">
-                {/* Rep 1: Penyewa */}
-                <div className="p-6 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between h-44">
-                  <div className="space-y-1.5">
-                    <span className="p-2 w-fit bg-blue-50 dark:bg-blue-900/10 text-blue-500 rounded-xl block"><UsersIcon className="w-5 h-5" /></span>
-                    <h4 className="font-bold text-sm text-slate-850 dark:text-slate-550 mt-2">Laporan Buku Tamu & Registrasi Penyewa</h4>
-                    <p className="text-[11px] text-slate-400">Total data: {tenants.length} Penyewa terdaftar KTP & nomor HP.</p>
-                  </div>
-                  <button
-                    onClick={() => generateReportInfo("Penyewa")}
-                    className="mt-4 px-4 py-2 bg-slate-50 dark:bg-slate-800 border hover:bg-slate-100 dark:hover:bg-slate-750 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5"
-                  >
-                    <FileSpreadsheetIcon className="w-3.5 h-3.5 text-blue-500" />
-                    Unduh CSV Spreadsheet
-                  </button>
+              {/* Loading State */}
+              {reportLoading && (
+                <div className="flex items-center justify-center py-16 gap-2 text-slate-400">
+                  <Loader2Icon className="w-5 h-5 animate-spin" />
+                  <span className="text-sm font-semibold">Memuat data laporan...</span>
                 </div>
+              )}
 
-                {/* Rep 2: Kamar */}
-                <div className="p-6 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between h-44">
-                  <div className="space-y-1.5">
-                    <span className="p-2 w-fit bg-purple-50 dark:bg-purple-900/10 text-purple-500 rounded-xl block"><BuildingIcon className="w-5 h-5" /></span>
-                    <h4 className="font-bold text-sm text-slate-850 dark:text-slate-550 mt-2">Laporan Utilitas & Ketersediaan Kamar</h4>
-                    <p className="text-[11px] text-slate-400">Status kos: {availableRooms} Tersedia, {occupiedRooms} Terisi aktif.</p>
-                  </div>
-                  <button
-                    onClick={() => generateReportInfo("Kamar")}
-                    className="mt-4 px-4 py-2 bg-slate-50 dark:bg-slate-800 border hover:bg-slate-100 dark:hover:bg-slate-750 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5"
-                  >
-                    <FileSpreadsheetIcon className="w-3.5 h-3.5 text-purple-500" />
-                    Unduh CSV Spreadsheet
-                  </button>
+              {/* Error State */}
+              {!reportLoading && reportError && (
+                <div className="flex items-center justify-center py-16 gap-2 text-rose-500">
+                  <AlertCircleIcon className="w-5 h-5" />
+                  <span className="text-sm font-semibold">{reportError}</span>
                 </div>
+              )}
 
-                {/* Rep 3: Pembayaran */}
-                <div className="p-6 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between h-44">
-                  <div className="space-y-1.5">
-                    <span className="p-2 w-fit bg-emerald-50 dark:bg-emerald-900/10 text-emerald-500 rounded-xl block"><DollarSignIcon className="w-5 h-5" /></span>
-                    <h4 className="font-bold text-sm text-slate-850 dark:text-slate-550 mt-2">Laporan Rekonsiliasi Bank & Kuitansi</h4>
-                    <p className="text-[11px] text-slate-400">Kas terkumpul: Rp {totalPendapatan.toLocaleString()} terverifikasi.</p>
+              {/* Reports Grid */}
+              {!reportLoading && !reportError && reportStats && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-left">
+                  {/* Laporan 1: Data Penyewa */}
+                  <div className="p-6 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <span className="p-2 w-fit bg-blue-50 dark:bg-blue-900/10 text-blue-500 rounded-xl block"><UsersIcon className="w-5 h-5" /></span>
+                      <h4 className="font-bold text-sm text-slate-850 dark:text-slate-200 mt-2">Laporan Data Penyewa</h4>
+                      <div className="grid grid-cols-3 gap-3 pt-2">
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Aktif</p>
+                          <p className="text-lg font-extrabold text-blue-600 dark:text-blue-400">{reportStats.penyewa.aktif}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Selesai</p>
+                          <p className="text-lg font-extrabold text-slate-600 dark:text-slate-300">{reportStats.penyewa.selesai}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Baru (Bln Ini)</p>
+                          <p className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">{reportStats.penyewa.baruBulanIni}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDownloadCSV("penyewa")}
+                      disabled={downloadingReport === "penyewa"}
+                      className="mt-4 px-4 py-2 bg-slate-50 dark:bg-slate-800 border hover:bg-slate-100 dark:hover:bg-slate-750 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition"
+                    >
+                      {downloadingReport === "penyewa" ? (
+                        <><Loader2Icon className="w-3.5 h-3.5 animate-spin" /> Mengunduh...</>
+                      ) : (
+                        <><FileSpreadsheetIcon className="w-3.5 h-3.5 text-blue-500" /> Unduh CSV Spreadsheet</>
+                      )}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => generateReportInfo("Pembayaran")}
-                    className="mt-4 px-4 py-2 bg-slate-50 dark:bg-slate-800 border hover:bg-slate-100 dark:hover:bg-slate-750 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5"
-                  >
-                    <FileSpreadsheetIcon className="w-3.5 h-3.5 text-emerald-500" />
-                    Unduh CSV Spreadsheet
-                  </button>
-                </div>
 
-                {/* Rep 4: Keuangan Pendapatan */}
-                <div className="p-6 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between h-44">
-                  <div className="space-y-1.5">
-                    <span className="p-2 w-fit bg-rose-50 dark:bg-rose-900/10 text-rose-500 rounded-xl block"><LandmarkIcon className="w-5 h-5" /></span>
-                    <h4 className="font-bold text-sm text-slate-850 dark:text-slate-550 mt-2">Laporan Laba Rugi Kos Terbuku</h4>
-                    <p className="text-[11px] text-slate-400">Periode: Pembukuan semesteran (Januari - Juni 2026).</p>
+                  {/* Laporan 2: Ketersediaan Kamar */}
+                  <div className="p-6 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <span className="p-2 w-fit bg-purple-50 dark:bg-purple-900/10 text-purple-500 rounded-xl block"><BuildingIcon className="w-5 h-5" /></span>
+                      <h4 className="font-bold text-sm text-slate-850 dark:text-slate-200 mt-2">Laporan Ketersediaan Kamar</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Total</p>
+                          <p className="text-lg font-extrabold text-purple-600 dark:text-purple-400">{reportStats.kamar.total}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Tersedia</p>
+                          <p className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">{reportStats.kamar.tersedia}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Terisi</p>
+                          <p className="text-lg font-extrabold text-slate-600 dark:text-slate-300">{reportStats.kamar.terisi}</p>
+                        </div>
+                        {reportStats.kamar.maintenance > 0 && (
+                          <div>
+                            <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Maintenance</p>
+                            <p className="text-lg font-extrabold text-amber-600 dark:text-amber-400">{reportStats.kamar.maintenance}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDownloadCSV("kamar")}
+                      disabled={downloadingReport === "kamar"}
+                      className="mt-4 px-4 py-2 bg-slate-50 dark:bg-slate-800 border hover:bg-slate-100 dark:hover:bg-slate-750 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition"
+                    >
+                      {downloadingReport === "kamar" ? (
+                        <><Loader2Icon className="w-3.5 h-3.5 animate-spin" /> Mengunduh...</>
+                      ) : (
+                        <><FileSpreadsheetIcon className="w-3.5 h-3.5 text-purple-500" /> Unduh CSV Spreadsheet</>
+                      )}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => generateReportInfo("LabaRugi")}
-                    className="mt-4 px-4 py-2 bg-slate-50 dark:bg-slate-800 border hover:bg-slate-100 dark:hover:bg-slate-750 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5"
-                  >
-                    <FileSpreadsheetIcon className="w-3.5 h-3.5 text-rose-500" />
-                    Unduh CSV Spreadsheet
-                  </button>
+
+                  {/* Laporan 3: Pembayaran */}
+                  <div className="p-6 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <span className="p-2 w-fit bg-emerald-50 dark:bg-emerald-900/10 text-emerald-500 rounded-xl block"><DollarSignIcon className="w-5 h-5" /></span>
+                      <h4 className="font-bold text-sm text-slate-850 dark:text-slate-200 mt-2">Laporan Pembayaran</h4>
+                      <div className="grid grid-cols-3 gap-3 pt-2">
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Berhasil</p>
+                          <p className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">{reportStats.pembayaran.berhasil}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Pending</p>
+                          <p className="text-lg font-extrabold text-amber-600 dark:text-amber-400">{reportStats.pembayaran.pending}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Total Pendapatan</p>
+                          <p className="text-base font-extrabold text-indigo-600 dark:text-sky-400">Rp {reportStats.pembayaran.totalPendapatan.toLocaleString("id-ID")}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDownloadCSV("pembayaran")}
+                      disabled={downloadingReport === "pembayaran"}
+                      className="mt-4 px-4 py-2 bg-slate-50 dark:bg-slate-800 border hover:bg-slate-100 dark:hover:bg-slate-750 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition"
+                    >
+                      {downloadingReport === "pembayaran" ? (
+                        <><Loader2Icon className="w-3.5 h-3.5 animate-spin" /> Mengunduh...</>
+                      ) : (
+                        <><FileSpreadsheetIcon className="w-3.5 h-3.5 text-emerald-500" /> Unduh CSV Spreadsheet</>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Laporan 4: Pemesanan */}
+                  <div className="p-6 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <span className="p-2 w-fit bg-rose-50 dark:bg-rose-900/10 text-rose-500 rounded-xl block"><ClipboardListIcon className="w-5 h-5" /></span>
+                      <h4 className="font-bold text-sm text-slate-850 dark:text-slate-200 mt-2">Laporan Pemesanan</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Total</p>
+                          <p className="text-lg font-extrabold text-rose-600 dark:text-rose-400">{reportStats.pemesanan.total}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Selesai</p>
+                          <p className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">{reportStats.pemesanan.selesai}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Dibatalkan</p>
+                          <p className="text-lg font-extrabold text-slate-500 dark:text-slate-400">{reportStats.pemesanan.dibatalkan}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-mono font-bold tracking-wide">Menunggu</p>
+                          <p className="text-lg font-extrabold text-amber-600 dark:text-amber-400">{reportStats.pemesanan.menunggu}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDownloadCSV("pemesanan")}
+                      disabled={downloadingReport === "pemesanan"}
+                      className="mt-4 px-4 py-2 bg-slate-50 dark:bg-slate-800 border hover:bg-slate-100 dark:hover:bg-slate-750 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition"
+                    >
+                      {downloadingReport === "pemesanan" ? (
+                        <><Loader2Icon className="w-3.5 h-3.5 animate-spin" /> Mengunduh...</>
+                      ) : (
+                        <><FileSpreadsheetIcon className="w-3.5 h-3.5 text-rose-500" /> Unduh CSV Spreadsheet</>
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

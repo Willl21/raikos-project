@@ -87,7 +87,7 @@ export default function LandingPage({ rooms, onSelectRoom, isLoading }: LandingP
             </h1>
 
             <p className="text-slate-600 dark:text-slate-300 text-lg sm:text-xl max-w-xl font-normal leading-relaxed mb-8">
-              Pencarian dan Pemesanan Kos Kini Lebih Mudah, Modern, dan Instan. Hunian premium siap huni dengan jaminan keamanan & fasilitas idaman.
+              Pencarian dan Pemesanan Kos Kini Lebih Mudah, Modern, dan Instan. Tempat tinggal nyaman siap huni dengan jaminan keamanan & fasilitas idaman.
             </p>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-4">
