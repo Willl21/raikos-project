@@ -358,7 +358,7 @@ export default function LandingPage({ rooms, onSelectRoom, isLoading }: LandingP
               <li>
                 <button
                   onClick={() => {
-                    const el = document.getElementById("cari-kamar");
+                    const el = document.getElementById("daftar-kamar");
                     el?.scrollIntoView({ behavior: "smooth" });
                   }}
                   className="hover:text-indigo-400 transition-colors"

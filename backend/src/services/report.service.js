@@ -239,7 +239,14 @@ export class ReportService {
       );
       return {
         headers: ["Nama", "Nomor HP", "Email", "Nomor KTP", "Tanggal Masuk", "Status"],
-        rows: rows.map((r) => [r.nama, r.nomor_hp, r.email, r.nomor_ktp, r.tanggal_masuk, r.status])
+        rows: rows.map((r) => [
+          r.nama, 
+          r.nomor_hp ? `'${r.nomor_hp}` : "-", 
+          r.email, 
+          r.nomor_ktp ? `'${r.nomor_ktp}` : "-", 
+          r.tanggal_masuk, 
+          r.status
+        ])
       };
     }
 
