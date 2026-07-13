@@ -1281,9 +1281,8 @@ export default function PenyewaDashboard({
                         value={paymentForm.paymentMethod}
                         onChange={(e) => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value })}
                       >
-                        <option value="Transfer Bank BCA">Transfer Bank BCA (884-293-192-1 a/n PT Raikos)</option>
-                        <option value="Transfer Bank Mandiri">Transfer Bank Mandiri (133-00-192-38 a/n PT Raikos)</option>
-                        <option value="Dana / Gopay">Transfer E-Wallet Dana / Gopay (081234567890)</option>
+                        <option value="Transfer Bank BCA"> Transfer Bank BCA ( 2303081585 a/n Rainhard Costa Panangian)</option>
+                        <option value="Dana / Gopay">Transfer E-Wallet Dana / Gopay (0852-1731-2670)</option>
                       </select>
                     </div>
 
