@@ -5,9 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "node backend/src/server.js",
-    "build": "node node_modules/vite/bin/vite.js build frontend",
+    "build": "vite build frontend",
     "start": "NODE_ENV=production node backend/src/server.js",
-    "postinstall": "npm run build",
     "clean": "rm -rf dist frontend/dist db.json",
     "lint": "tsc --noEmit --project frontend/tsconfig.json"
   },
