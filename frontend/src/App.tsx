@@ -884,7 +884,7 @@ export default function App() {
                   {authMode === "login" ? "Masuk Sekarang" : "Selesaikan Pendaftaran"}
                 </button>
 
-                {authMode === "login" && (
+                {false &&authMode === "login" && (
                   <>
                     <div className="relative flex py-1 items-center">
                       <div className="flex-grow border-t border-slate-100 dark:border-slate-800"></div>
