@@ -614,13 +614,24 @@ export default function App() {
 
   const handleResetDB = async () => {
     if (!confirm("Perhatian! Tindakan ini akan mengosongkan seluruh relasi tabel kustom Anda dan memulihkan Seed Data asli Raikos. Lanjutkan?")) return;
+    // Token sengaja diminta saat itu juga, bukan disimpan di kode frontend.
+    const token = prompt("Masukkan ADMIN_TOKEN:");
+    if (!token) return;
     try {
-      const res = await fetch("/api/db/reset", { method: "POST" });
+      const res = await fetch("/api/db/reset", {
+        method: "POST",
+        headers: { "x-admin-token": token },
+      });
       if (res.ok) {
         showToast("Database MySQL terekreasi sukses!", "success");
         fetchAllData();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.message || "Reset database ditolak.", "error");
       }
-    } catch (err) {}
+    } catch (err) {
+      showToast("Koneksi gagal saat mereset database.", "error");
+    }
   };
 
 
