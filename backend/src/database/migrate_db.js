@@ -2,7 +2,7 @@ import mysql from "mysql2/promise";
 import dotenv from "dotenv";
 import { fileURLToPath } from "node:url";
 
-dotenv.config({ path: new URL("../../.env", import.meta.url).pathname });
+dotenv.config({ path: new URL("../../.env", import.meta.url) });
 
 async function run() {
   const conn = await mysql.createConnection({

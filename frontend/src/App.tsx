@@ -310,7 +310,7 @@ export default function App() {
 
   const handleLogout = () => {
     setCurrentUser(null);
-    setCurrentRole(null);
+    setCurrentRole(null);5
     setActiveTab("landing");
     showToast("Anda telah keluar dari sistem secara aman.", "info");
   };

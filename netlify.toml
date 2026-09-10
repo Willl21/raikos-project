@@ -1,0 +1,22 @@
+[build]
+  command = "npm run build"
+  publish = "frontend/dist"
+
+# Ganti dengan URL Render kamu, tanpa slash di akhir.
+[[redirects]]
+  from = "/api/*"
+  to = "https://NAMA-APP.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+# Bukti pembayaran lama (baru pakai URL Cloudinary absolut, tidak lewat sini).
+[[redirects]]
+  from = "/uploads/*"
+  to = "https://NAMA-APP.onrender.com/uploads/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

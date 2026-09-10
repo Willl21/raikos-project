@@ -1,4 +1,5 @@
 import { PaymentService } from "../services/payment.service.js";
+import { uploadToCloudinary } from "../middleware/upload.js";
 
 export class PaymentController {
   static async getAllPayments(req, res) {
@@ -15,7 +16,7 @@ export class PaymentController {
     try {
       const paymentData = { ...req.body };
       if (req.file) {
-        paymentData.proof_image = `/uploads/payment/${req.file.filename}`;
+        paymentData.proof_image = await uploadToCloudinary(req.file);
       }
       const payment = await PaymentService.createPayment(paymentData);
       return res.status(200).json({ success: true, payment });

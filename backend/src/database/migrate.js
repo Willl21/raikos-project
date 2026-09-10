@@ -26,8 +26,14 @@ async function migrate() {
     // 1. Connect without database first to ensure database exists
     connection = await mysql.createConnection(dbConfig);
     
-    console.log("[Migration] Creating database if not exists...");
-    await connection.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME || "raikos_db"}\`;`);
+    // Managed MySQL (Clever Cloud dkk) sudah menyediakan database dan tidak
+    // memberi hak CREATE DATABASE, jadi kegagalan di sini bukan error fatal.
+    try {
+      console.log("[Migration] Creating database if not exists...");
+      await connection.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME || "raikos_db"}\`;`);
+    } catch (err) {
+      console.warn("[Migration] Lewati CREATE DATABASE:", err.message);
+    }
     await connection.query(`USE \`${process.env.DB_NAME || "raikos_db"}\`;`);
 
     // 2. Run schema.sql
