@@ -31,17 +31,26 @@ app.use("/uploads", express.static(path.join(projectRoot, "uploads")));
 app.use(requestMiddleware);
 
 // Initialize DB Extensions and run initial lifecycle check
-RentalService.initializeDatabaseExtensions().then(() => {
-  console.log("[RentalSystem] Database schema check completed.");
-  RentalService.checkRentalLifecycles().then(() => {
+// Rejection di sini tidak boleh menjatuhkan proses: DB bisa saja belum siap
+// saat boot, dan restart-loop lebih buruk daripada satu siklus yang terlewat.
+RentalService.initializeDatabaseExtensions()
+  .then(() => {
+    console.log("[RentalSystem] Database schema check completed.");
+    return RentalService.checkRentalLifecycles();
+  })
+  .then(() => {
     console.log("[RentalSystem] Initial rental lifecycle expiration check completed.");
+  })
+  .catch((err) => {
+    console.error("[RentalSystem] Inisialisasi gagal:", err.message);
   });
-});
 
 // Run lifecycle checker every hour
 setInterval(() => {
   console.log("[RentalSystem] Running hourly rental lifecycle checks...");
-  RentalService.checkRentalLifecycles();
+  RentalService.checkRentalLifecycles().catch((err) => {
+    console.error("[RentalSystem] Lifecycle check gagal:", err.message);
+  });
 }, 60 * 60 * 1000);
 
 // Pre-hook middleware to ensure database lifecycle state is always synced before returning list data

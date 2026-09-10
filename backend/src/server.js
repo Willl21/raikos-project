@@ -3,6 +3,12 @@ import app from "./app.js";
 
 dotenv.config({ path: new URL("../.env", import.meta.url) });
 
+// Jaring pengaman: satu promise yang lolos tanpa catch tidak boleh
+// mematikan seluruh server dan memicu restart-loop di host gratisan.
+process.on("unhandledRejection", (err) => {
+  console.error("[Raikos Server] Unhandled rejection:", err);
+});
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, "0.0.0.0", () => {
